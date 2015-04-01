@@ -127,9 +127,9 @@ class Sorceror::Backend::Poseidon
       end
     end
 
-    module Worker
+    module Subscriber
       def backend_subscriber_initialize(subscriber_worker)
-        @distributor = Sorceror::Subscriber::Worker::Distributor.new(subscriber_worker)
+        @distributor = Sorceror::Worker.new(subscriber_worker)
       end
 
       def backend_subscriber_start

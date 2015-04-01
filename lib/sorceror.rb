@@ -12,7 +12,7 @@ module Sorceror
   require 'sorceror/autoload'
 
   extend Sorceror::Autoload
-  autoload :Model, :Error, :Backend, :Config
+  autoload :Model, :Error, :Backend, :Config, :Message, :Worker
 
   class << self
     def configure(&block)

@@ -17,7 +17,6 @@ module Sorceror::Backend
 
     def lost_connection_exception(options={})
       backends = {
-        :amqp_url        => Sorceror::Config.amqp_url,
         :kafka_hosts     => Sorceror::Config.kafka_hosts,
         :zookeeper_hosts => Sorceror::Config.zookeeper_hosts
       }
