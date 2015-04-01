@@ -1,7 +1,7 @@
 module Sorceror::Config
   mattr_accessor :app, :backend, :kafka_backend, :kafka_hosts, :zookeeper_hosts, :publisher_topic,
                  :subscriber_topics, :socket_timeout, :logger, :subscriber_threads,
-                 :error_notifier, :test_mode
+                 :error_notifier, :retry, :trail
 
   def self.backend=(value)
     @@backend = value
@@ -27,15 +27,8 @@ module Sorceror::Config
     self.logger               ||= defined?(Rails) ? Rails.logger : Logger.new(STDERR).tap { |l| l.level = Logger::WARN }
     self.subscriber_threads   ||= 10
     self.error_notifier       ||= proc {}
-    self.test_mode            = set_test_mode
-  end
-
-  def self.set_test_mode
-    if self.test_mode.nil?
-      defined?(Rails) ? Rails.env.test? ? true : false : false
-    else
-      self.test_mode
-    end
+    self.retry                = nil
+    self.trail                = false
   end
 
   def self.configure(&block)

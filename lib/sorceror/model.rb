@@ -4,7 +4,7 @@ module Sorceror::Model
   included do
     class << self
       [:create, :create!].each do |method|
-        alias_method "orig_#{method}", method
+        alias_method "mongoid_#{method}", method
         define_method(method) do |*args, &block|
           raise "Direct persistence not supported with Sorceror"
         end
@@ -12,6 +12,8 @@ module Sorceror::Model
     end
 
     mattr_accessor :partition_key
+    mattr_accessor :operations
+    self.operations = {}
 
     [:save, :save!, :update_attributes!, :update_attributes].each do |method|
       alias_method "mongoid_#{method}", method
@@ -19,10 +21,17 @@ module Sorceror::Model
         raise "Direct persistence not supported with Sorceror"
       end
     end
+
+    field :__cb__ # Callbacks
+    field :__pv__ # Previous Vesion (used to diff and detect changes)
+
+    Sorceror::Model.models[self.model_name.name] = self
   end
 
-  def initialize(attributes)
+  class << self
+    attr_accessor :models
   end
+  self.models = {}
 
   module ClassMethods
     def publish(attributes)
@@ -32,11 +41,16 @@ module Sorceror::Model
     def key(partition_key)
       self.partition_key = partition_key
     end
+
+    def operation(name, &block)
+      self.operations[name.to_sym] = block
+    end
   end
 
   def payload
     payload = {
-      operation: :created,
+      operation: :__create__,
+      type: self.class.to_s,
       id: self.id
     }
     payload.merge(attributes: self.as_json)
@@ -62,12 +76,9 @@ module Sorceror::Model
     "#{model_name.plural}/#{self.send(partition_key)}"
   end
 
-  def initialize(*args)
-    super
-  end
-
   def as_json(options={})
     attrs = super
+    attrs.reject! { |k,v| k.to_s.match(/^__.*__$/) }
     id = attrs.delete('_id')
     attrs.merge('id' => id)
   end

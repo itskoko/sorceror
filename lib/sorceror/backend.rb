@@ -11,8 +11,6 @@ module Sorceror::Backend
     def driver=(value)
       disconnect
       @driver_class = value.try { |v| "Sorceror::Backend::#{v.to_s.camelize.gsub(/backend/, 'Backend')}".constantize }
-      @subscriber_class = @driver_class.try { |dc| dc.const_get(:Subscriber) rescue nil }
-      @subscriber_methods = @subscriber_class.try { |sc| sc.const_get(:Worker) rescue nil }
     end
 
     def lost_connection_exception(options={})
@@ -52,10 +50,6 @@ module Sorceror::Backend
     def publish(*args)
       ensure_connected
       driver.publish(*args)
-    end
-
-    def const_missing(sym)
-      driver_class.const_get(sym)
     end
   end
 end

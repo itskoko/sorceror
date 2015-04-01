@@ -34,8 +34,12 @@ class Sorceror::Worker
                                                 Sorceror::Config.kafka_hosts,
                                                 Sorceror::Config.zookeeper_hosts,
                                                 options[:topic],
-                                                :trail => Sorceror::Config.test_mode,
+                                                :trail => Sorceror::Config.trail,
                                                 :max_wait_ms => 10)
+    end
+
+    def disconnect
+      @consumer.close
     end
 
     def fetch_and_process_messages
@@ -43,10 +47,10 @@ class Sorceror::Worker
         payloads.each do |payload|
           Sorceror.debug "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} offset:#{payload.offset} parition:#{partition} #{Thread.current.object_id}"
           begin
-            puts "Payload: #{payload.value}"
-            # metadata = MetaData.new(@consumer, partition, payload.offset)
-            # msg = Sorceror::Subscriber::Message.new(payload.value, :metadata => metadata)
-            # msg.process
+            metadata = MetaData.new(@consumer, partition, payload.offset)
+            message = Sorceror::Message.new(payload.value, :metadata => metadata)
+            Sorceror::Operation.process(message)
+            message.ack
           rescue StandardError => e
             Sorceror.warn "[kafka] [receive] cannot process message: #{e}\n#{e.backtrace.join("\n")}"
             Sorceror::Config.error_notifier.call(e)

@@ -10,9 +10,10 @@ module Sorceror
   end
 
   require 'sorceror/autoload'
+  require_for 'rails', 'sorceror/railtie'
 
   extend Sorceror::Autoload
-  autoload :Model, :Error, :Backend, :Config, :Message, :Worker
+  autoload :Model, :Error, :Backend, :Config, :Message, :Worker, :Operation, :Message
 
   class << self
     def configure(&block)
