@@ -3,7 +3,7 @@ module Sorceror::Model
 
   included do
     class << self
-      [:create, :create!].each do |method|
+      [:create!].each do |method|
         alias_method "mongoid_#{method}", method
         define_method(method) do |*args, &block|
           raise "Direct persistence not supported with Sorceror"
@@ -11,11 +11,13 @@ module Sorceror::Model
       end
     end
 
+    define_model_callbacks :publish, only: [:before]
+
     mattr_accessor :partition_key
     mattr_accessor :operations
     self.operations = {}
 
-    [:save, :save!, :update_attributes!, :update_attributes].each do |method|
+    [:save, :save!, :update, :update!, :update_attributes!, :update_attributes].each do |method|
       alias_method "mongoid_#{method}", method
       define_method(method) do |*args, &block|
         raise "Direct persistence not supported with Sorceror"
@@ -34,8 +36,8 @@ module Sorceror::Model
   self.models = {}
 
   module ClassMethods
-    def publish(attributes)
-      self.new(attributes).publish
+    def create(attributes)
+      self.new(attributes).create
     end
 
     def key(partition_key)
@@ -44,32 +46,47 @@ module Sorceror::Model
 
     def operation(name, &block)
       self.operations[name.to_sym] = block
+
+      define_method(name) do |*args|
+        attributes = args[0] || {}
+        unless @publishing
+          self.publish(name, attributes)
+        end
+      end
     end
   end
 
-  def payload
-    payload = {
-      operation: :__create__,
-      type: self.class.to_s,
-      id: self.id
-    }
-    payload.merge(attributes: self.as_json)
-  end
-
-  def publish
+  def create
     return false unless valid?
 
+    self.publish(:__create__, self.as_json)
+  end
+
+  def payload(operation, attributes)
+    {
+      operation: operation,
+      type: self.class.to_s,
+      id: self.id,
+      attributes: attributes
+    }
+  end
+
+  def publish(operation, attributes)
     raise "Already published" if @published # TODO Use error classes
     raise "Already persisted" if persisted?
 
-    payload_opts = { :topic      => Sorceror::Config.publisher_topic,
-                     :topic_key  => topic_key,
-                     :payload    => MultiJson.dump(payload),
-                     :async      => false }
+    run_callbacks :publish do
+      @publishing = true
 
-    Sorceror::Backend.publish(payload_opts)
+      payload_opts = { :topic      => Sorceror::Config.publisher_topic,
+                       :topic_key  => topic_key,
+                       :payload    => MultiJson.dump(payload(operation, attributes)),
+                       :async      => false }
 
-    @published = true
+      Sorceror::Backend.publish(payload_opts)
+
+      @published = true
+    end
   end
 
   def topic_key

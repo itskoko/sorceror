@@ -19,11 +19,15 @@ class Sorceror::Message
   end
 
   def operation_name
-    parsed_payload['operation']
+    parsed_payload['operation'].to_sym
   end
 
   def attributes
     parsed_payload['attributes']
+  end
+
+  def id
+    parsed_payload['id']
   end
 
   def to_s

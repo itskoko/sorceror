@@ -8,13 +8,18 @@ module Sorceror::Operation
 
     begin
       if model = Sorceror::Model.models[message.type]
-        operation = model.operations[message.operation_name.to_sym]
+        operation = model.operations[message.operation_name]
 
         unless operation
           raise "Operation #{message.operation_name} not defined for #{message.type}" # TODO Use Error class
         end
 
-        operation.call(message)
+        instance = if message.operation_name == :__create__
+          model.new(message.attributes)
+        else
+          model.find(message.id)
+        end
+        operation.call(instance)
       end
     rescue StandardError => e
       Sorceror::Config.error_notifier.call(e)
