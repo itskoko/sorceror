@@ -24,8 +24,8 @@ module Sorceror::Model
       end
     end
 
-    field :__cb__ # Callbacks
-    field :__pv__ # Previous Vesion (used to diff and detect changes)
+    field :__ob__ # Observers
+    field :__lk__ # Instance lock
 
     Sorceror::Model.models[self.model_name.name] = self
   end

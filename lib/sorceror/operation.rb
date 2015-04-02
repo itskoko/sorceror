@@ -5,7 +5,9 @@ module Sorceror::Operation
 
     begin
       if model = Sorceror::Model.models[message.type]
+
         instance = nil
+
         message.operations.each do |operation|
           operation_proc = model.operations[operation.name]
 
@@ -13,24 +15,51 @@ module Sorceror::Operation
             raise "Operation #{operation.name} not defined for #{message.type}" # TODO Use Error class
           end
 
-          instance ||= if operation.name == :__create__
-            model.new(operation.attributes)
-          else
-            model.find(operation.id)
+          instance ||= begin
+                         instance = model.where(id: operation.id).first
+                         if instance.nil? && operation.name == :__create__
+                           instance = model.new(operation.attributes)
+                         end
+                         instance
+                       end
+
+          unless instance
+            raise "[#{message.type}][#{operation.name}][#{operation.id}] unable to find instance. Something is wrong!"
           end
 
           operation_proc.call(instance)
+
+          unless instance.__lk__
+            instance.__ob__ ||= []
+            if model_observers = Sorceror::Observer.observers_by_model[model]
+              observer = model_observers.find { |ob| ob[:operation] == operation.name.to_s.gsub('__', '').to_sym }
+              instance.__ob__ << observer[:name] if observer
+            end
+          end
         end
+
+        instance.__lk__ = true
 
         begin
           raise "Unable to save" unless instance.mongoid_save
         rescue StandardError => e
           if e.message =~ /E11000/ # Duplicate key
-            Promiscuous.warn "[#{message.type}][#{message.attributes['id']}] ignoring already created record"
+            Promiscuous.warn "[#{message.type}][#{instance.id}] ignoring already created record"
           else
             raise e
           end
         end
+
+        instance.__ob__.each do |observer_name|
+          observer = Sorceror::Observer.observers_by_name[observer_name]
+          observer[:proc].call(instance)
+
+          instance.__ob__ -= [observer_name]
+          raise "Unable to save" unless instance.mongoid_save
+        end
+
+        instance.__lk__ = false
+        raise "Unable to save" unless instance.mongoid_save
       end
     rescue StandardError => e
       Sorceror::Config.error_notifier.call(e)
