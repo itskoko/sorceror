@@ -15,7 +15,7 @@ module Sorceror::Model
 
     mattr_accessor :partition_key
     mattr_accessor :operations
-    self.operations = {}
+    self.operations = { __create__: -> _ {} }
 
     [:save, :save!, :update, :update!, :update_attributes!, :update_attributes].each do |method|
       alias_method "mongoid_#{method}", method
@@ -49,9 +49,7 @@ module Sorceror::Model
 
       define_method(name) do |*args|
         attributes = args[0] || {}
-        unless @publishing
-          self.publish(name, attributes)
-        end
+        self.publish(name, attributes)
       end
     end
   end
@@ -64,8 +62,7 @@ module Sorceror::Model
 
   def payload(operation, attributes)
     {
-      operation: operation,
-      type: self.class.to_s,
+      name: operation,
       id: self.id,
       attributes: attributes
     }
@@ -75,18 +72,29 @@ module Sorceror::Model
     raise "Already published" if @published # TODO Use error classes
     raise "Already persisted" if persisted?
 
-    run_callbacks :publish do
-      @publishing = true
+    @payloads ||= []
 
+    unless @running_callbacks
+      @running_callbacks = true
+      run_callbacks :publish
+      @running_callbacks = false
+    end
+
+    @payloads << payload(operation, attributes)
+
+    unless @running_callbacks
       payload_opts = { :topic      => Sorceror::Config.publisher_topic,
                        :topic_key  => topic_key,
-                       :payload    => MultiJson.dump(payload(operation, attributes)),
-                       :async      => false }
+                       :payload    => MultiJson.dump({
+                         :operations => @payloads.reverse,
+                         :type       => self.class.to_s,
+                       })
+      }
 
       Sorceror::Backend.publish(payload_opts)
-
-      @published = true
     end
+
+    @published = true
   end
 
   def topic_key
@@ -96,6 +104,7 @@ module Sorceror::Model
   def as_json(options={})
     attrs = super
     attrs.reject! { |k,v| k.to_s.match(/^__.*__$/) }
+    attrs.reject! { |k,v| v.nil? }
     id = attrs.delete('_id')
     attrs.merge('id' => id)
   end

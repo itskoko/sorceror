@@ -66,12 +66,6 @@ class Sorceror::Backend::Poseidon
     end
   rescue StandardError => e
     Sorceror.warn("[publish] Failure publishing to kafka #{e}\n#{e.backtrace.join("\n")}")
-    e = Sorceror::Error::Publisher.new(e, :payload => options[:payload])
-
-    if options[:async]
-      Sorceror::Config.error_notifier.call(e)
-    else
-      raise e
-    end
+    raise Sorceror::Error::Publisher.new(e, :payload => options[:payload])
   end
 end

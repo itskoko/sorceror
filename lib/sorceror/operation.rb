@@ -1,25 +1,36 @@
 module Sorceror::Operation
-  extend Promiscuous::Autoload
-  autoload :Persistence
-
   def self.process(message)
     retries = 0   # TODO Make constants
     retry_max = 50
 
     begin
       if model = Sorceror::Model.models[message.type]
-        operation = model.operations[message.operation_name]
+        instance = nil
+        message.operations.each do |operation|
+          operation_proc = model.operations[operation.name]
 
-        unless operation
-          raise "Operation #{message.operation_name} not defined for #{message.type}" # TODO Use Error class
+          unless operation_proc
+            raise "Operation #{operation.name} not defined for #{message.type}" # TODO Use Error class
+          end
+
+          instance ||= if operation.name == :__create__
+            model.new(operation.attributes)
+          else
+            model.find(operation.id)
+          end
+
+          operation_proc.call(instance)
         end
 
-        instance = if message.operation_name == :__create__
-          model.new(message.attributes)
-        else
-          model.find(message.id)
+        begin
+          raise "Unable to save" unless instance.mongoid_save
+        rescue StandardError => e
+          if e.message =~ /E11000/ # Duplicate key
+            Promiscuous.warn "[#{message.type}][#{message.attributes['id']}] ignoring already created record"
+          else
+            raise e
+          end
         end
-        operation.call(instance)
       end
     rescue StandardError => e
       Sorceror::Config.error_notifier.call(e)

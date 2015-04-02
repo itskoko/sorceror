@@ -18,16 +18,8 @@ class Sorceror::Message
     parsed_payload['type']
   end
 
-  def operation_name
-    parsed_payload['operation'].to_sym
-  end
-
-  def attributes
-    parsed_payload['attributes']
-  end
-
-  def id
-    parsed_payload['id']
+  def operations
+    parsed_payload['operations'].map { |op| PayloadOperation.new(op) }
   end
 
   def to_s
@@ -42,5 +34,23 @@ class Sorceror::Message
     # We don't care if we fail, the message will be redelivered at some point
     Sorceror.warn "[receive] Some exception happened, but it's okay: #{e}\n#{e.backtrace.join("\n")}"
     Sorceror::Config.error_notifier.call(e)
+  end
+
+  class PayloadOperation
+    def initialize(payload)
+      @payload = payload
+    end
+
+    def id
+      @payload['id']
+    end
+
+    def name
+      @payload['name'].to_sym
+    end
+
+    def attributes
+      @payload['attributes']
+    end
   end
 end
