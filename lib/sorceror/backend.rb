@@ -1,6 +1,6 @@
 module Sorceror::Backend
   extend Sorceror::Autoload
-  autoload :Poseidon, :Null, :Fake
+  autoload :Poseidon, :Null, :Inline
 
   class << self
     attr_accessor :driver
@@ -45,11 +45,16 @@ module Sorceror::Backend
       driver.new_connection(*args)
     end
 
-    delegate :connected?, :process_message, :to => :driver
+    delegate :connected?, :stop_subscriber, :to => :driver
 
     def publish(*args)
       ensure_connected
       driver.publish(*args)
+    end
+
+    def start_subscriber
+      ensure_connected
+      driver.start_subscriber
     end
   end
 end
