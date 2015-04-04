@@ -68,6 +68,10 @@ class Sorceror::Backend::Poseidon
     @distributor_threads = nil
   end
 
+  def subscriber_stopped?
+    @distributor_threads.nil?
+  end
+
   def show_stop_status(num_requests)
     @distributor_threads.to_a.each { |distributor_thread| distributor_thread.show_stop_status(num_requests) }
   end

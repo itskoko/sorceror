@@ -1,3 +1,10 @@
+require 'active_support/dependencies/autoload'
+require 'active_support/deprecation'
+require 'active_support/core_ext'
+require 'active_model/callbacks'
+
+require 'multi_json'
+
 module Sorceror
   def self.require_for(gem, file)
     only_for(gem) { require file }
@@ -14,7 +21,7 @@ module Sorceror
 
   extend Sorceror::Autoload
   autoload :Model, :Error, :Backend, :Config, :Message, :Worker,
-           :Operation, :Message, :Observer
+           :Operation, :Message, :Observer, :CLI
 
   class << self
     def configure(&block)

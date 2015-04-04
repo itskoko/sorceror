@@ -27,7 +27,8 @@ module Sorceror::Operation
             raise "[#{message.type}][#{operation.name}][#{operation.id}] unable to find instance. Something is wrong!"
           end
 
-          operation_proc.call(instance)
+          args = [instance, operation.attributes][0...operation_proc.arity]
+          operation_proc.call(*args)
 
           unless instance.__lk__
             instance.__ob__ ||= []

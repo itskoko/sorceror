@@ -45,7 +45,7 @@ module Sorceror::Backend
       driver.new_connection(*args)
     end
 
-    delegate :connected?, :stop_subscriber, :to => :driver
+    delegate :connected?, :stop_subscriber, :subscriber_stopped?, :to => :driver
 
     def publish(*args)
       ensure_connected

@@ -12,7 +12,7 @@ class Sorceror::Backend::Inline
   def publish(options={})
     message = Sorceror::Message.new(options[:payload], :metadata => MetaData)
     Sorceror::Operation.process(message)
-    Sorceror.debug "[publish] [fake] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
+    Sorceror.debug "[publish] [inline] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
   end
 
   def start_subscriber
