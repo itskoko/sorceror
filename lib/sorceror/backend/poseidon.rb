@@ -7,6 +7,7 @@ class Sorceror::Backend::Poseidon
   def initialize
     # The poseidon socket doesn't like when multiple threads access to it apparently
     @connection_lock = Mutex.new
+    @distributor_threads = []
   end
 
   def new_connection
@@ -54,14 +55,14 @@ class Sorceror::Backend::Poseidon
   def start_subscriber
     num_threads = Sorceror::Config.subscriber_threads
     Sorceror::Config.subscriber_topics.each do |topic|
-      @distributor_threads ||= num_threads.times.map { DistributorThread.new(topic) }
-      Sorceror.debug "[distributor] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
+      @distributor_threads << num_threads.times.map { DistributorThread.new(topic) }
+      Sorceror.info "[distributor] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
     end
   end
 
   def stop_subscriber
-    return unless @distributor_threads
-    Sorceror.debug "[distributor] Stopping #{@distributor_threads.count} threads"
+    return if @distributor_threads.empty?
+    Sorceror.info "[distributor] Stopping #{@distributor_threads.count} threads"
 
     @distributor_threads.each { |distributor_thread| distributor_thread.stop }
     @distributor_threads = nil

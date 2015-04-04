@@ -37,7 +37,7 @@ module Sorceror::Model
 
   module ClassMethods
     def create(attributes)
-      self.new(attributes).create
+      self.new(attributes).tap(&:create)
     end
 
     def key(partition_key)
@@ -57,7 +57,9 @@ module Sorceror::Model
   def create
     return false unless valid?
 
-    self.publish(:__create__, self.as_json)
+    self.publish(:__create__, -> { self.as_json })
+
+    self
   end
 
   def payload(operation, attributes)
@@ -80,6 +82,7 @@ module Sorceror::Model
       @running_callbacks = false
     end
 
+    attributes = attributes.call if attributes.is_a? Proc
     @payloads << payload(operation, attributes)
 
     unless @running_callbacks

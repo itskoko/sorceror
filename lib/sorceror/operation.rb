@@ -32,8 +32,8 @@ module Sorceror::Operation
           unless instance.__lk__
             instance.__ob__ ||= []
             if model_observers = Sorceror::Observer.observers_by_model[model]
-              observer = model_observers.find { |ob| ob[:operation] == operation.name.to_s.gsub('__', '').to_sym }
-              instance.__ob__ << observer[:name] if observer
+              observers = model_observers.select { |ob| ob[:operation] == operation.name.to_s.gsub('__', '').to_sym }.map { |ob| ob[:name] }
+              instance.__ob__ += observers
             end
           end
         end
