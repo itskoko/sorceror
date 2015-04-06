@@ -15,7 +15,7 @@ module Sorceror::Model
 
     mattr_accessor :partition_key
     mattr_accessor :operations
-    self.operations = { __create__: -> _ {} }
+    self.operations = { create: -> _ {} }
 
     [:save, :save!, :update, :update!, :update_attributes!, :update_attributes].each do |method|
       alias_method "mongoid_#{method}", method
@@ -57,7 +57,7 @@ module Sorceror::Model
   def create
     return false unless valid?
 
-    self.publish(:__create__, -> { self.as_json })
+    self.publish(:create, -> { self.as_json })
 
     self
   end

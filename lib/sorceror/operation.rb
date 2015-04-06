@@ -1,7 +1,7 @@
 module Sorceror::Operation
   def self.process(message)
-    retries = 0   # TODO Make constants
-    retry_max = 50
+    retries = 0
+    retry_max = 50 # TODO Make constants
 
     begin
       if model = Sorceror::Model.models[message.type]
@@ -17,7 +17,7 @@ module Sorceror::Operation
 
           instance ||= begin
                          instance = model.where(id: operation.id).first
-                         if instance.nil? && operation.name == :__create__
+                         if instance.nil? && operation.name == :create # XXX Is there a way to generalize?
                            instance = model.new(operation.attributes)
                          end
                          instance
@@ -33,7 +33,7 @@ module Sorceror::Operation
           unless instance.__lk__
             instance.__ob__ ||= []
             if model_observers = Sorceror::Observer.observers_by_model[model]
-              observers = model_observers.select { |ob| ob[:operation] == operation.name.to_s.gsub('__', '').to_sym }.map { |ob| ob[:name] }
+              observers = model_observers.select { |ob| ob[:operation] == operation.name.to_sym }.map { |ob| ob[:name] }
               instance.__ob__ += observers
             end
           end
