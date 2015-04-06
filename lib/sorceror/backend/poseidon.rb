@@ -18,7 +18,7 @@ class Sorceror::Backend::Poseidon
                                           :metadata_refresh_interval_ms => 600_000,
                                           :max_send_retries => 10,
                                           :retry_backoff_ms => 100,
-                                          :required_acks => 1,
+                                          :required_acks => -1,
                                           :ack_timeout_ms => 1000,
                                           :socket_timeout_ms => Sorceror::Config.socket_timeout)
   end
