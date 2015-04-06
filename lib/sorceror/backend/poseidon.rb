@@ -55,7 +55,7 @@ class Sorceror::Backend::Poseidon
   def start_subscriber
     num_threads = Sorceror::Config.subscriber_threads
     Sorceror::Config.subscriber_topics.each do |topic|
-      @distributor_threads << num_threads.times.map { DistributorThread.new(topic) }
+      @distributor_threads += num_threads.times.map { DistributorThread.new(topic) }
       Sorceror.info "[distributor] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
     end
   end
