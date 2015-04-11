@@ -28,6 +28,8 @@ module Sorceror::Model
     field :__lk__ # Instance lock
 
     Sorceror::Model.models[self.model_name.name] = self
+
+    include Sorceror::Serializer
   end
 
   class << self
@@ -102,19 +104,5 @@ module Sorceror::Model
 
   def topic_key
     "#{model_name.plural}/#{self.send(partition_key)}"
-  end
-
-  def as_json(options={})
-    attrs = super
-
-    id = attrs.delete('_id') # For Mongoid
-
-    attrs.reject! { |k,v| k.to_s.match(/^__.*__$/) }
-    attrs.reject! { |k,v| v.nil? }
-    attrs.merge!(id: id)
-
-    attrs.map { |k,v| attrs[k] = v.is_a?(Time) ? v.to_f : v }
-
-    attrs
   end
 end
