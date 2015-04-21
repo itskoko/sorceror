@@ -1,7 +1,7 @@
 module Sorceror::Config
-  mattr_accessor :app, :backend, :kafka_backend, :kafka_hosts, :zookeeper_hosts, :publisher_topic,
-                 :subscriber_topics, :socket_timeout, :logger, :subscriber_threads,
-                 :error_notifier, :retry, :trail
+  mattr_accessor :app, :backend, :kafka_backend, :kafka_hosts, :zookeeper_hosts,
+                 :logger, :subscriber_threads, :operation_topic, :event_topic,
+                 :error_notifier, :retry, :trail, :socket_timeout
 
   def self.backend=(value)
     @@backend = value
@@ -20,9 +20,8 @@ module Sorceror::Config
     self.backend              ||= :poseidon
     self.kafka_hosts          ||= ['localhost:9092']
     self.zookeeper_hosts      ||= ['localhost:2181']
-    self.publisher_topic      ||= self.app
-    self.subscriber_topics    ||= [self.publisher_topic]
-
+    self.operation_topic      ||= "#{self.app}.operations"
+    self.event_topic          ||= "#{self.app}.events"
     self.socket_timeout       ||= 50
     self.logger               ||= defined?(Rails) ? Rails.logger : Logger.new(STDERR).tap { |l| l.level = Logger::WARN }
     self.subscriber_threads   ||= 10

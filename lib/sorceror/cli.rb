@@ -29,7 +29,7 @@ class Sorceror::CLI
         Thread.new do
           print_status "Exiting..."
           if @stop
-            Sorceror::Backend.show_stop_status
+            Sorceror::Backend.show_stop_status # XXX NOT WORKING
           else
             @stop = true
             Sorceror::Backend.stop_subscriber

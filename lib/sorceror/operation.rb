@@ -1,4 +1,6 @@
 module Sorceror::Operation
+  # TODO  DRY up with Event using Processor super class perhaps
+
   def self.process(message)
     retries = 0
     retry_max = 50 # TODO Make constants
@@ -6,10 +8,12 @@ module Sorceror::Operation
     begin
       if model = Sorceror::Model.models[message.type]
 
+        events = {}
         instance = nil
 
         message.operations.each do |operation|
-          operation_proc = model.operations[operation.name]
+          operation_proc  = model.operations[operation.name][:proc]
+          operation_event = model.operations[operation.name][:event]
 
           unless operation_proc
             raise "Operation #{operation.name} not defined for #{message.type}" # TODO Use Error class
@@ -27,40 +31,39 @@ module Sorceror::Operation
             raise "[#{message.type}][#{operation.name}][#{operation.id}] unable to find instance. Something is wrong!"
           end
 
+          events[instance] ||= []
+          events[instance] << operation_event
+
           args = [instance, operation.attributes][0...operation_proc.arity]
           operation_proc.call(*args)
 
-          unless instance.__lk__
-            instance.__ob__ ||= []
-            if model_observers = Sorceror::Observer.observers_by_model[model]
-              observers = model_observers.select { |ob| ob[:operation] == operation.name.to_sym }.map { |ob| ob[:name] }
-              instance.__ob__ += observers
+          begin
+            raise "Unable to save" unless instance.mongoid_save
+          rescue StandardError => e
+            if e.message =~ /E11000/ # Duplicate key
+              Promiscuous.warn "[#{message.type}][#{instance.id}] ignoring already created record"
+            else
+              raise e
             end
           end
         end
 
-        instance.__lk__ = true
+        events.each do |instance, event_names|
+          payload_opts = { :topic      => Sorceror::Config.event_topic,
+                           :topic_key  => instance.topic_key,
+                           :payload    => MultiJson.dump({
+                             :id         => instance.id,
+                             :events     => event_names,
+                             :attributes => instance.attributes,
+                             :type       => instance.class.to_s,
+                           })
+          }
 
-        begin
-          raise "Unable to save" unless instance.mongoid_save
-        rescue StandardError => e
-          if e.message =~ /E11000/ # Duplicate key
-            Promiscuous.warn "[#{message.type}][#{instance.id}] ignoring already created record"
-          else
-            raise e
-          end
+          # XXX Not idempotent (multiple instances so multiple publishes, so if
+          # a publish fails and there are subsequent publishes, the publish will
+          # be repeated. This MAY NOT BE A PROBLEM.
+          Sorceror::Backend.publish(payload_opts)
         end
-
-        instance.__ob__.each do |observer_name|
-          observer = Sorceror::Observer.observers_by_name[observer_name]
-          observer[:proc].call(instance)
-
-          instance.__ob__ -= [observer_name]
-          raise "Unable to save" unless instance.mongoid_save
-        end
-
-        instance.__lk__ = false
-        raise "Unable to save" unless instance.mongoid_save
       end
     rescue StandardError => e
       Sorceror::Config.error_notifier.call(e)

@@ -54,9 +54,15 @@ class Sorceror::Backend::Poseidon
 
   def start_subscriber
     num_threads = Sorceror::Config.subscriber_threads
-    Sorceror::Config.subscriber_topics.each do |topic|
-      @distributor_threads += num_threads.times.map { DistributorThread.new(topic) }
-      Sorceror.info "[distributor] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
+
+    Sorceror::Config.operation_topic.tap do |topic|
+      @distributor_threads += num_threads.times.map { DistributorThread::Operation.new(topic: topic) }
+      Sorceror.info "[distributor:operation] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
+    end
+
+    Sorceror::Observer.observer_groups.each do |group, options|
+      @distributor_threads += num_threads.times.map { DistributorThread::Event.new(topic: Sorceror::Config.event_topic, group: group, options: options) }
+      Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.event_topic} and group:#{group}"
     end
   end
 
@@ -81,7 +87,7 @@ class Sorceror::Backend::Poseidon
   def raw_publish(options)
     tries ||= 5
     if @connection.send_messages([Poseidon::MessageToSend.new(options[:topic], options[:payload], options[:topic_key])])
-      Sorceror.debug "[publish] [kafka] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
+      Sorceror.info "[publish] [kafka] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
     else
       raise Sorceror::Error::Publisher.new(Exception.new('There were no messages to publish?'), :payload => options[:payload])
     end
@@ -97,22 +103,13 @@ class Sorceror::Backend::Poseidon
   end
 
   class DistributorThread
-    def initialize(topic)
+    def initialize(options)
       @stop = false
-      @thread = Thread.new(topic) {|t| main_loop(t) }
-
-      Sorceror.debug "[distributor] Subscribing to topic:#{topic} [#{@thread.object_id}]"
+      @thread = Thread.new(options) {|opt| main_loop(opt) }
     end
 
     def subscribe(options)
-      raise "No topic specified" unless options[:topic]
-
-      @consumer = ::Poseidon::ConsumerGroup.new(Sorceror::Config.app,
-                                                Sorceror::Config.kafka_hosts,
-                                                Sorceror::Config.zookeeper_hosts,
-                                                options[:topic],
-                                                :trail => Sorceror::Config.trail,
-                                                :max_wait_ms => 10)
+      # Override
     end
 
     def disconnect
@@ -122,12 +119,10 @@ class Sorceror::Backend::Poseidon
     def fetch_and_process_messages
       @consumer.fetch(:commit => false) do |partition, payloads|
         payloads.each do |payload|
-          Sorceror.debug "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} offset:#{payload.offset} parition:#{partition} #{Thread.current.object_id}"
+          Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} offset:#{payload.offset} parition:#{partition} #{Thread.current.object_id}"
           begin
             metadata = MetaData.new(@consumer, partition, payload.offset)
-            message = Sorceror::Message.new(payload.value, :metadata => metadata)
-            Sorceror::Operation.process(message)
-            message.ack
+            process(payload, metadata)
           rescue StandardError => e
             Sorceror.warn "[kafka] [receive] cannot process message: #{e}\n#{e.backtrace.join("\n")}"
             Sorceror::Config.error_notifier.call(e)
@@ -136,15 +131,19 @@ class Sorceror::Backend::Poseidon
       end
     end
 
-    def main_loop(topic)
-      @consumer = subscribe(:topic => topic)
+    def process(message)
+      # Override
+    end
+
+    def main_loop(options)
+      @consumer = subscribe(options)
 
       while not @stop do
         begin
           fetch_and_process_messages
         rescue Poseidon::Connection::ConnectionFailedError
-          Sorceror.debug "[kafka] Reconnecting... [#{@thread.object_id}]"
-          @consumer = subscribe(@topic)
+          Sorceror.info "[kafka] Reconnecting... [#{@thread.object_id}]"
+          @consumer = subscribe(options)
         end
         sleep 0.1
       end
@@ -190,6 +189,54 @@ class Sorceror::Backend::Poseidon
       def ack
         Sorceror.debug "[kafka] [commit] topic:#{@consumer.topic} offset:#{@offset+1} partition:#{@partition}"
         @consumer.commit(@partition, @offset+1)
+      end
+    end
+
+    class Operation < self
+      def subscribe(options)
+        raise "No topic specified" unless options[:topic]
+
+        Sorceror.debug "[distributor] Subscribing to topic:#{options[:topic]} [#{@thread.object_id}]"
+
+        @consumer = ::Poseidon::ConsumerGroup.new(Sorceror::Config.app,
+                                                  Sorceror::Config.kafka_hosts,
+                                                  Sorceror::Config.zookeeper_hosts,
+                                                  options[:topic],
+                                                  :trail => Sorceror::Config.trail,
+                                                  :max_wait_ms => 100)
+      end
+
+      def process(payload, metadata)
+        message = Sorceror::Message::Operation.new(payload.value, :metadata => metadata)
+        Sorceror::Operation.process(message)
+        message.ack
+      end
+    end
+
+    class Event < self
+      def subscribe(options)
+        raise "No topic specified" unless options[:topic]
+        raise "No group specified" unless options[:group]
+
+        @topic = options[:topic]
+        @group = options[:group]
+
+        trail = options[:options].fetch(:trail, false)
+
+        Sorceror.debug "[distributor] Subscribing to topic:#{@topic}, group #{@group} [#{@thread.object_id}]"
+
+        @consumer = ::Poseidon::ConsumerGroup.new("#{Sorceror::Config.app}.#{@group}",
+                                                  Sorceror::Config.kafka_hosts,
+                                                  Sorceror::Config.zookeeper_hosts,
+                                                  @topic,
+                                                  :trail => trail,
+                                                  :max_wait_ms => 100)
+      end
+
+      def process(payload, metadata)
+        message = Sorceror::Message::Event.new(payload.value, :metadata => metadata)
+        Sorceror::Event.process(message, @group)
+        message.ack
       end
     end
   end

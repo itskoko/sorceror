@@ -18,10 +18,6 @@ class Sorceror::Message
     parsed_payload['type']
   end
 
-  def operations
-    parsed_payload['operations'].map { |op| PayloadOperation.new(op) }
-  end
-
   def to_s
     "#{app} -> #{types}"
   end
@@ -36,21 +32,41 @@ class Sorceror::Message
     Sorceror::Config.error_notifier.call(e)
   end
 
-  class PayloadOperation
-    def initialize(payload)
-      @payload = payload
+  class Operation < self
+    def operations
+      parsed_payload['operations'].map { |op| Payload.new(op) }
     end
 
+    class Payload
+      def initialize(payload)
+        @payload = payload
+      end
+
+      def id
+        @payload['id']
+      end
+
+      def name
+        @payload['name'].to_sym
+      end
+
+      def attributes
+        @payload['attributes']
+      end
+    end
+  end
+
+  class Event < self
     def id
-      @payload['id']
+      parsed_payload['id']
     end
 
-    def name
-      @payload['name'].to_sym
+    def events
+      parsed_payload['events']
     end
 
     def attributes
-      @payload['attributes']
+      parsed_payload['attributes']
     end
   end
 end

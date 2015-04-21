@@ -10,9 +10,17 @@ class Sorceror::Backend::Inline
   end
 
   def publish(options={})
-    message = Sorceror::Message.new(options[:payload], :metadata => MetaData)
-    Sorceror::Operation.process(message)
-    Sorceror.debug "[publish] [inline] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
+    if options[:topic] == Sorceror::Config.operation_topic
+      message = Sorceror::Message::Operation.new(options[:payload], :metadata => MetaData)
+      Sorceror::Operation.process(message)
+    elsif options[:topic] == Sorceror::Config.event_topic
+      message = Sorceror::Message::Event.new(options[:payload], :metadata => MetaData)
+      Sorceror::Observer.observer_groups.each do |group, _|
+        Sorceror::Event.process(message, group)
+      end
+    else
+      raise "Invalid payload attributes to publish #{options}"
+    end
   end
 
   def start_subscriber

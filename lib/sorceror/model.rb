@@ -11,11 +11,11 @@ module Sorceror::Model
       end
     end
 
-    define_model_callbacks :publish, only: [:before]
+    define_model_callbacks :operation, only: [:before]
 
     mattr_accessor :partition_key
     mattr_accessor :operations
-    self.operations = { create: -> _ {} }
+    self.operations = { create: { proc: -> _ {}, event: :created  } }
 
     [:save, :save!, :update, :update!, :update_attributes!, :update_attributes].each do |method|
       alias_method "mongoid_#{method}", method
@@ -23,9 +23,6 @@ module Sorceror::Model
         raise "Direct persistence not supported with Sorceror"
       end
     end
-
-    field :__ob__ # Observers
-    field :__lk__ # Instance lock
 
     Sorceror::Model.models[self.model_name.name] = self
 
@@ -46,12 +43,14 @@ module Sorceror::Model
       self.partition_key = partition_key
     end
 
-    def operation(name, &block)
-      self.operations[name.to_sym] = block
+    def operation(defn, &block)
+      name, event_name = defn.first
+
+      self.operations[name.to_sym] = { proc: block, event: event_name }
 
       define_method(name) do |*args|
         attributes = args[0] || {}
-        self.publish(name, attributes)
+        publish_operation(name, attributes)
       end
     end
   end
@@ -59,20 +58,20 @@ module Sorceror::Model
   def create
     return false unless valid?
 
-    self.publish(:create, -> { self.as_json })
+    self.publish_operation(:create, -> { self.as_json })
 
     self
   end
 
-  def payload(operation, attributes)
+  def payload(name, attributes)
     {
-      name: operation,
+      name: name,
       id: self.id,
       attributes: attributes
     }
   end
 
-  def publish(operation, attributes)
+  def publish_operation(name, attributes)
     raise "Already published" if @published # TODO Use error classes
     raise "Already persisted" if persisted?
 
@@ -80,15 +79,15 @@ module Sorceror::Model
 
     unless @running_callbacks
       @running_callbacks = true
-      run_callbacks :publish
+      run_callbacks :operation
       @running_callbacks = false
     end
 
     attributes = attributes.call if attributes.is_a? Proc
-    @payloads << payload(operation, attributes)
+    @payloads << payload(name, attributes)
 
     unless @running_callbacks
-      payload_opts = { :topic      => Sorceror::Config.publisher_topic,
+      payload_opts = { :topic      => Sorceror::Config.operation_topic,
                        :topic_key  => topic_key,
                        :payload    => MultiJson.dump({
                          :operations => @payloads.reverse,

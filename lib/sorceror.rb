@@ -21,7 +21,7 @@ module Sorceror
 
   extend Sorceror::Autoload
   autoload :Model, :Error, :Backend, :Config, :Message, :Worker,
-           :Operation, :Message, :Observer, :CLI, :Serializer
+           :Operation, :Message, :Observer, :CLI, :Serializer, :Event
 
   class << self
     def configure(&block)
