@@ -4,7 +4,7 @@ class Sorceror::Railtie < Rails::Railtie
       Mongoid.preload_models = true
 
       if Sorceror::Config.retry.nil?
-        Sorceror::Config.retry = Rails.env.test? ? true : false
+        Sorceror::Config.retry = Rails.env.test? ? false : true
       end
     end
 
@@ -12,7 +12,6 @@ class Sorceror::Railtie < Rails::Railtie
       ::Rails::Sorceror.load_observers(app)
     end
   end
-
 end
 
 module Rails::Sorceror

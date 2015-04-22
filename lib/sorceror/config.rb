@@ -26,8 +26,8 @@ module Sorceror::Config
     self.logger               ||= defined?(Rails) ? Rails.logger : Logger.new(STDERR).tap { |l| l.level = Logger::WARN }
     self.subscriber_threads   ||= 10
     self.error_notifier       ||= proc {}
-    self.retry                = nil
-    self.trail                = false
+    self.retry                ||= nil
+    self.trail                ||= false
   end
 
   def self.configure(&block)
