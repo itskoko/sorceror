@@ -9,7 +9,6 @@ module Sorceror::Operation
       if model = Sorceror::Model.models[message.type]
 
         events = {}
-        instance = nil
 
         message.operations.each do |operation|
           operation_proc  = model.operations[operation.name][:proc]
@@ -54,7 +53,7 @@ module Sorceror::Operation
                            :payload    => MultiJson.dump({
                              :id         => instance.id,
                              :events     => event_names,
-                             :attributes => instance.attributes,
+                             :attributes => instance.as_json,
                              :type       => instance.class.to_s,
                            })
           }

@@ -18,13 +18,7 @@ class Sorceror::Message
     parsed_payload['type']
   end
 
-  def to_s
-    "#{app} -> #{types}"
-  end
-
   def ack
-    Sorceror.debug "[receive] #{payload}"
-
     @metadata.ack
   rescue StandardError => e
     # We don't care if we fail, the message will be redelivered at some point
