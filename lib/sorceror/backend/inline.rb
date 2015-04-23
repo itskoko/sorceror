@@ -23,7 +23,7 @@ class Sorceror::Backend::Inline
     end
   end
 
-  def start_subscriber
+  def start_subscriber(consumer)
   end
 
   def stop_subscriber

@@ -45,9 +45,9 @@ class Sorceror::CLI
   end
 
   def subscribe
-    Sorceror::Backend.start_subscriber
+    Sorceror::Backend.start_subscriber(options[:args].first.try(:to_sym))
     Sorceror::Config.subscriber_threads.tap do |threads|
-      print_status "[sorceror] Working [#{threads} thread#{'s' if threads > 1}]..."
+      print_status "[sorceror] Working [#{threads} thread#{'s' if threads > 1} per group]..."
     end
     sleep 0.2 until Sorceror::Backend.subscriber_stopped?
   end
@@ -92,6 +92,8 @@ class Sorceror::CLI
     parser.parse!(args)
 
     options[:action] = args.shift.try(:to_sym)
+
+    options[:args] = args
 
     case options[:action]
     when :subscribe           then raise "Why are you specifying a criteria?"   if     options[:criterias].present?

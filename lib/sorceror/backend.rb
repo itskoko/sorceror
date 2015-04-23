@@ -52,9 +52,12 @@ module Sorceror::Backend
       driver.publish(*args)
     end
 
-    def start_subscriber
+    def start_subscriber(consumer)
+      consumer ||= :all
+      raise "Unknown operation #{topic}. Must be one of all, operation or event." unless consumer.in? [:all, :operation, :event]
+
       ensure_connected
-      driver.start_subscriber
+      driver.start_subscriber(consumer)
     end
   end
 end

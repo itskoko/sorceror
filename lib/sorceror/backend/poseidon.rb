@@ -52,17 +52,21 @@ class Sorceror::Backend::Poseidon
     raise Sorceror::Error::Publisher.new(e, :payload => options[:payload])
   end
 
-  def start_subscriber
+  def start_subscriber(consumer)
     num_threads = Sorceror::Config.subscriber_threads
 
-    Sorceror::Config.operation_topic.tap do |topic|
-      @distributor_threads += num_threads.times.map { DistributorThread::Operation.new(topic: topic) }
-      Sorceror.info "[distributor:operation] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
+    if consumer.in?([:all, :operation])
+      Sorceror::Config.operation_topic.tap do |topic|
+        @distributor_threads += num_threads.times.map { DistributorThread::Operation.new(topic: topic) }
+        Sorceror.info "[distributor:operation] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
+      end
     end
 
-    Sorceror::Observer.observer_groups.each do |group, options|
-      @distributor_threads += num_threads.times.map { DistributorThread::Event.new(topic: Sorceror::Config.event_topic, group: group, options: options) }
-      Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.event_topic} and group:#{group}"
+    if consumer.in?([:all, :event])
+      Sorceror::Observer.observer_groups.each do |group, options|
+        @distributor_threads += num_threads.times.map { DistributorThread::Event.new(topic: Sorceror::Config.event_topic, group: group, options: options) }
+        Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.event_topic} and group:#{group}"
+      end
     end
   end
 

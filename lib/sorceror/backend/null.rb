@@ -13,7 +13,7 @@ class Sorceror::Backend::Null
     Sorceror.debug "[publish] [null] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
   end
 
-  def start_subscriber
+  def start_subscriber(consumer)
   end
 
   def stop_subscriber
