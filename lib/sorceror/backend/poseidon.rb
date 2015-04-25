@@ -213,8 +213,10 @@ class Sorceror::Backend::Poseidon
                                                   Sorceror::Config.kafka_hosts,
                                                   Sorceror::Config.zookeeper_hosts,
                                                   options[:topic],
-                                                  :trail => Sorceror::Config.trail,
-                                                  :max_wait_ms => 100)
+                                                  :trail        => Sorceror::Config.trail,
+                                                  :max_bytes    => 2**20,
+                                                  :min_bytes    => 0,
+                                                  :max_wait_ms  => 10)
       end
 
       def process(payload, metadata)
