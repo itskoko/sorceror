@@ -19,7 +19,8 @@ Gem::Specification.new do |s|
   s.add_dependency "activesupport", ">= 4"
   s.add_dependency "activemodel", ">= 4"
   s.add_dependency "poseidon", "~> 0.0.5"
-  s.add_dependency "promiscuous-poseidon_cluster", "~> 0.4.1 "
+  # Must override with kemoko/poseidon_cluster
+  s.add_dependency "poseidon_cluster", "~> 0.3.0"
   s.add_dependency "multi_json", "~> 1.8"
 
   s.files        = Dir["lib/**/*"] + Dir["bin/**/*"]
