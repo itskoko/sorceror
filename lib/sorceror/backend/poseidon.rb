@@ -139,14 +139,14 @@ class Sorceror::Backend::Poseidon
     end
 
     def main_loop(options)
-      @consumer = subscribe(options)
+      subscribe(options)
 
       while not @stop do
         begin
           fetch_and_process_messages
         rescue Poseidon::Connection::ConnectionFailedError
-          Sorceror.info "[kafka] Reconnecting... [#{@thread.object_id}]"
-          @consumer = subscribe(options)
+          Sorceror.info "[kafka] Reconnecting... [#{@consumer.id}]"
+          subscribe(options)
         end
         sleep 0.1
       end
@@ -159,13 +159,13 @@ class Sorceror::Backend::Poseidon
     end
 
     def stop
-      Sorceror.info "[distributor] stopping status:#{@thread.status} [#{@thread.object_id}]"
+      Sorceror.info "[distributor] stopping status:#{@thread.status} [#{@consumer.id}]"
 
       # We wait in case the consumer is responsible for more than one partition
       # see: https://github.com/bsm/poseidon_cluster/blob/master/lib/poseidon/consumer_group.rb#L229
       @stop = true
       @thread.join
-      Sorceror.info "[distributor] stopped [#{@thread.object_id}]"
+      Sorceror.info "[distributor] stopped [#{@consumer.id}]"
     end
 
     def show_stop_status(num_requests)
@@ -207,8 +207,6 @@ class Sorceror::Backend::Poseidon
         @topic = options[:topic]
         @group = Sorceror::Config.app
 
-        Sorceror.info "[distributor] Subscribing to topic:#{@topic} group:#{@group} [#{@thread.object_id}]"
-
         @consumer = ::Poseidon::ConsumerGroup.new(@group,
                                                   Sorceror::Config.kafka_hosts,
                                                   Sorceror::Config.zookeeper_hosts,
@@ -217,10 +215,12 @@ class Sorceror::Backend::Poseidon
                                                   :max_bytes    => 2**20,
                                                   :min_bytes    => 0,
                                                   :max_wait_ms  => 10)
+
+        Sorceror.info "[distributor] Subscribed to topic:#{@topic} group:#{@group} [#{@consumer.id}]"
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{Thread.current.object_id}"
+        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
         message = Sorceror::Message::Operation.new(payload.value, :metadata => metadata)
         Sorceror::Operation.process(message)
@@ -239,18 +239,18 @@ class Sorceror::Backend::Poseidon
 
         trail = options[:options].fetch(:trail, false)
 
-        Sorceror.info "[distributor] Subscribing to topic:#{@topic} group:#{@group} [#{@thread.object_id}]"
-
         @consumer = ::Poseidon::ConsumerGroup.new(@group,
                                                   Sorceror::Config.kafka_hosts,
                                                   Sorceror::Config.zookeeper_hosts,
                                                   @topic,
                                                   :trail => trail,
                                                   :max_wait_ms => 10)
+
+        Sorceror.info "[distributor] Subscribed to topic:#{@topic} group:#{@group} [#{@consumer.id}]"
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{Thread.current.object_id}"
+        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
         message = Sorceror::Message::Event.new(payload.value, :metadata => metadata)
         Sorceror::Event.process(message, @group_name)
