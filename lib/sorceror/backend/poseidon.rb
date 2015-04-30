@@ -16,11 +16,11 @@ class Sorceror::Backend::Poseidon
                                           :type => :sync,
                                           :compression_codec => :none, # TODO Make configurable
                                           :metadata_refresh_interval_ms => 600_000,
-                                          :max_send_retries => 10,
+                                          :max_send_retries => 3,
                                           :retry_backoff_ms => 100,
                                           :required_acks => -1,
-                                          :ack_timeout_ms => 1000,
-                                          :socket_timeout_ms => Sorceror::Config.socket_timeout)
+                                          :ack_timeout_ms => 2000,
+                                          :socket_timeout_ms => 10_000)
   end
 
   def connect
