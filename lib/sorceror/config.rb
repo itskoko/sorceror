@@ -34,7 +34,7 @@ module Sorceror::Config
       self._configure(&block)
 
       unless self.app
-        raise "Promiscuous.configure: please give a name to your app with \"config.app = 'your_app_name'\""
+        raise "Sorceror.configure: please give a name to your app with \"config.app = 'your_app_name'\""
       end
     end
 

@@ -1,4 +1,4 @@
 module Sorceror::Error
-  extend Promiscuous::Autoload
+  extend Sorceror::Autoload
   autoload :Base, :Connection, :Publisher
 end

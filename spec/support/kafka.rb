@@ -1,16 +1,16 @@
 module KafkaHelper
   def advance_offsets_forward!
     broker_pool = ::Poseidon::BrokerPool.new(::Poseidon::Cluster.guid,
-                                             Promiscuous::Config.kafka_hosts,
-                                             Promiscuous::Config.socket_timeout)
+                                             Sorceror::Config.kafka_hosts,
+                                             Sorceror::Config.socket_timeout)
 
-    broker_host, broker_port = Promiscuous::Config.kafka_hosts.first.split(':')
+    broker_host, broker_port = Sorceror::Config.kafka_hosts.first.split(':')
     broker_pool.update_known_brokers({ 0 => { :host => broker_host, :port => broker_port }})
 
     # we assume that a topic maps to a ConsumerGroup one-to-one
-    zk = ZK.new(Promiscuous::Config.zookeeper_hosts.join(','))
+    zk = ZK.new(Sorceror::Config.zookeeper_hosts.join(','))
     begin
-      Promiscuous::Config.subscriber_topics.each do |topic|
+      Sorceror::Config.subscriber_topics.each do |topic|
         partitions_path = "/consumers/#{topic}/offsets/#{topic}"
         zk.children(partitions_path).each do |partition|
           partition_offset_requests = [::Poseidon::Protocol::PartitionOffsetRequest.new(partition.to_i, -1, 1000)]

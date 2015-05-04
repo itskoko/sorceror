@@ -40,7 +40,7 @@ module Sorceror::Operation
             raise "Unable to save" unless instance.mongoid_save
           rescue StandardError => e
             if e.message =~ /E11000/ # Duplicate key
-              Promiscuous.warn "[#{message.type}][#{instance.id}] ignoring already created record"
+              Sorceror.warn "[#{message.type}][#{instance.id}] ignoring already created record"
             else
               raise e
             end
