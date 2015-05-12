@@ -1,46 +1,51 @@
 module KafkaHelper
   def advance_offsets_forward!
-    broker_pool = ::Poseidon::BrokerPool.new(::Poseidon::Cluster.guid,
-                                             Sorceror::Config.kafka_hosts,
-                                             Sorceror::Config.socket_timeout)
-
-    broker_host, broker_port = Sorceror::Config.kafka_hosts.first.split(':')
-    broker_pool.update_known_brokers({ 0 => { :host => broker_host, :port => broker_port }})
-
-    # we assume that a topic maps to a ConsumerGroup one-to-one
     zk = ZK.new(Sorceror::Config.zookeeper_hosts.join(','))
-    begin
-      Sorceror::Config.subscriber_topics.each do |topic|
-        partitions_path = "/consumers/#{topic}/offsets/#{topic}"
-        zk.children(partitions_path).each do |partition|
-          partition_offset_requests = [::Poseidon::Protocol::PartitionOffsetRequest.new(partition.to_i, -1, 1000)]
-          offset_topic_requests = [::Poseidon::Protocol::TopicOffsetRequest.new(topic, partition_offset_requests)]
-          offset_responses = broker_pool.execute_api_call(0, :offset, offset_topic_requests)
-          latest_offset = offset_responses.first.partition_offsets.first.offsets.first.offset
 
-          zk.set([ partitions_path, partition ].join('/'), latest_offset.to_s)
+    begin
+      kafka = nil
+      topics_offsets = {}
+
+      zk.children('/brokers/topics').each do |topic|
+        partitions = zk.children("/brokers/topics/#{topic}/partitions")
+        broker = JSON.load(zk.get('/brokers/ids/0')[0])
+        kafka  = Poseidon::Connection.new(broker["host"], broker["port"], "newrelic-conumser-lag", 1000)
+
+        partition_requests = partitions.map { |partition| Poseidon::Protocol::PartitionOffsetRequest.new(partition.to_i, -1, 1) }
+        offset_res = kafka.offset([Poseidon::Protocol::TopicOffsetRequest.new(topic, partition_requests)])
+
+        offset_res[0].partition_offsets.each do |offset|
+          topics_offsets[topic] ||= {}
+          topics_offsets[topic][offset.partition] = offset.offsets.first.offset
         end
       end
-    rescue ZK::Exceptions::NoNode
-      # It's ok. Nothing to advance.
+    ensure
+      kafka.close
     end
+
+    consumers = Sorceror::Observer.observer_groups.keys.map { |k| "#{Sorceror::Config.app}.#{k}"}
+    consumers << Sorceror::Config.app
+    consumers.each do |consumer|
+      topics_offsets.each do |topic, partitions|
+        partitions.each do |partition, offset|
+          path = "/consumers/#{consumer}/offsets/#{topic}/#{partition}"
+          zk.mkdir_p(path)
+          zk.set(path, offset.to_s)
+        end
+      end
+    end
+    true
+  ensure
     zk.close
     zk.close! # otherwise connections lay around
-    broker_pool.close
-
-    true
-  end
-
-  def poseidon_after_use_real_backend
-    advance_offsets_forward!
   end
 
   def kafka_hosts
-    ["localhost:#{TestCluster::KAFKA_PORT}"]
+    ["localhost:#{KafkaHarness::KAFKA_PORT}"]
   end
 
   def zookeeper_hosts
-    ["localhost:#{TestCluster::ZOOKP_PORT}"]
+    ["localhost:#{KafkaHarness::ZOOKP_PORT}"]
   end
 end
 
@@ -51,7 +56,7 @@ end
 
 RSpec.configure do |config|
   config.before(:suite) do
-    $tc ||= TestCluster.new
+    $tc ||= KafkaHarness.new
     $tc.start
   end
 

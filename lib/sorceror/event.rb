@@ -47,9 +47,10 @@ module Sorceror::Event
       Sorceror::Config.error_notifier.call(e)
       raise e unless Sorceror::Config.retry
 
+      # TODO XXX Need a way to exit if the subscriber has been stopped
       if retries < retry_max
         retries += 1
-        sleep 5
+        sleep 0.1 * 3**retries
         retry
       end
     end

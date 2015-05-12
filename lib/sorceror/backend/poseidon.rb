@@ -117,19 +117,15 @@ class Sorceror::Backend::Poseidon
     end
 
     def disconnect
-      @consumer.close
+      @consumer.close if @consumer
+      @consumer = nil
     end
 
     def fetch_and_process_messages
       @consumer.fetch(:commit => false) do |partition, payloads|
         payloads.each do |payload|
-          begin
-            metadata = MetaData.new(@consumer, @group, partition, payload.offset)
-            process(payload, metadata)
-          rescue StandardError => e
-            Sorceror.warn "[kafka] [receive] cannot process message: #{e}\n#{e.backtrace.join("\n")}"
-            Sorceror::Config.error_notifier.call(e)
-          end
+          metadata = MetaData.new(@consumer, @group, partition, payload.offset)
+          process(payload, metadata)
         end
       end
     end
@@ -154,18 +150,17 @@ class Sorceror::Backend::Poseidon
       Sorceror.warn "[kafka] [distributor] died: #{e}\n#{e.backtrace.join("\n")}"
       Sorceror::Config.error_notifier.call(e)
     ensure
-      @consumer.close if @consumer
-      @consumer = nil
+      disconnect
     end
 
     def stop
-      Sorceror.info "[distributor] stopping status:#{@thread.status} [#{@consumer.id}]"
+      id = @consumer.try(:id) || 'NA'
+      Sorceror.info "[distributor] stopping status:#{@thread.status} [#{id}]"
 
-      # We wait in case the consumer is responsible for more than one partition
-      # see: https://github.com/bsm/poseidon_cluster/blob/master/lib/poseidon/consumer_group.rb#L229
       @stop = true
       @thread.join
-      Sorceror.info "[distributor] stopped [#{@consumer.id}]"
+
+      Sorceror.info "[distributor] stopped [#{id}]"
     end
 
     def show_stop_status(num_requests)
@@ -220,7 +215,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
+        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} partition:#{metadata.partition} #{@consumer.id}"
 
         message = Sorceror::Message::Operation.new(payload.value, :metadata => metadata)
         Sorceror::Operation.process(message)

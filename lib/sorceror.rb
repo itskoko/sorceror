@@ -17,7 +17,8 @@ module Sorceror
   end
 
   require 'sorceror/autoload'
-  require_for 'rails', 'sorceror/railtie'
+  require_for 'rails',   'sorceror/railtie'
+  require_for 'mongoid', 'sorceror/mongoid'
 
   extend Sorceror::Autoload
   autoload :Model, :Error, :Backend, :Config, :Message, :Worker,

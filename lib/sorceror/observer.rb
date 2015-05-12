@@ -24,6 +24,13 @@ module Sorceror::Observer
 
       Sorceror::Observer.observers_by_name[name] = defn.merge(model: model)
     end
+
+  end
+
+  def self.reset!
+    self.observer_groups_by_model = {}
+    self.observer_groups = {}
+    self.observers_by_name = {}
   end
 
   class << self
@@ -31,7 +38,6 @@ module Sorceror::Observer
     attr_accessor :observers_by_name
     attr_accessor :observer_groups
   end
-  self.observer_groups_by_model = {}
-  self.observer_groups = {}
-  self.observers_by_name = {}
+
+  reset!
 end

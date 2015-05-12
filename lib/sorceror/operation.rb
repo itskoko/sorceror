@@ -70,7 +70,7 @@ module Sorceror::Operation
 
       if retries < retry_max
         retries += 1
-        sleep 5
+        sleep 0.1 * 3**retries
         retry
       end
     end
