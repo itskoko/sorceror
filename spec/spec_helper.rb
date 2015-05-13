@@ -1,3 +1,12 @@
+require "codeclimate-test-reporter"
+if ENV['CODECLIMATE_REPO_TOKEN']
+  CodeClimate::TestReporter.start
+elsif ENV["COVERAGE"]
+  SimpleCov.start do
+    add_filter "/spec"
+  end
+end
+
 require 'rubygems'
 require 'bundler'
 Bundler.require

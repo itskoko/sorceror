@@ -14,3 +14,5 @@ gem 'poseidon',         github: 'kemoko/poseidon'
 gem 'mongoid'
 
 gem 'pry'
+
+gem "codeclimate-test-reporter", group: :test, require: nil
