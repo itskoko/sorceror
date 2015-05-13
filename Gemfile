@@ -4,9 +4,6 @@ gemspec
 gem 'rake'
 gem 'rspec'
 gem 'rspec-retry', :require => false
-gem 'mocha',       :require => false
-gem 'simplecov',   :require => false
-gem 'coveralls',   :require => false
 
 gem 'poseidon_cluster', github: 'kemoko/poseidon_cluster'
 gem 'poseidon',         github: 'kemoko/poseidon'

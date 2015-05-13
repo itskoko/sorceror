@@ -1,5 +1,5 @@
 tmp
 Gemfile.lock
-kafka_*
+kafka*/
 log-cleaner.log
 coverage
