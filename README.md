@@ -1,0 +1,1 @@
+# Sorceror [![Code Climate](https://codeclimate.com/github/kemoko/sorceror/badges/gpa.svg)](https://codeclimate.com/github/kemoko/sorceror) [![Test Coverage](https://codeclimate.com/github/kemoko/sorceror/badges/coverage.svg)](https://codeclimate.com/github/kemoko/sorceror/coverage)
