@@ -18,13 +18,16 @@ module Sorceror::Operation
             raise "Operation #{operation.name} not defined for #{message.type}" # TODO Use Error class
           end
 
-          instance ||= begin
-                         instance = model.where(id: operation.id).first
-                         if instance.nil? && operation.name == :create # XXX Is there a way to generalize?
-                           instance = model.new(operation.attributes)
-                         end
-                         instance
-                       end
+          instance = model.where(id: operation.id).first
+
+          if operation.name == :create
+            if instance.nil?
+              instance = model.new(operation.attributes)
+            elsif instance.present?
+              Sorceror.warn "[#{message.type}][#{instance.id}] ignoring as already created"
+              return
+            end
+          end
 
           unless instance
             raise "[#{message.type}][#{operation.name}][#{operation.id}] unable to find instance. Something is wrong!"
@@ -36,15 +39,7 @@ module Sorceror::Operation
           args = [instance, operation.attributes][0...operation_proc.arity]
           operation_proc.call(*args)
 
-          begin
-            raise "Unable to save" unless instance.mongoid_save
-          rescue StandardError => e
-            if e.message =~ /E11000/ # Duplicate key
-              Sorceror.warn "[#{message.type}][#{instance.id}] ignoring already created record"
-            else
-              raise e
-            end
-          end
+          raise "Unable to save" unless instance.mongoid_save
         end
 
         events.each do |instance, event_names|

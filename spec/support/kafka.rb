@@ -55,12 +55,14 @@ if ENV['POSEIDON_LOGGER_LEVEL']
 end
 
 RSpec.configure do |config|
-  config.before(:suite) do
-    $tc ||= KafkaHarness.new
-    $tc.start
-  end
+  if config.files_to_run.grep(/poseidon/).present?
+    config.before(:suite) do
+      $tc ||= KafkaHarness.new
+      $tc.start
+    end
 
-  config.after(:suite) do
-    $tc.stop
+    config.after(:suite) do
+      $tc.stop
+    end
   end
 end
