@@ -28,6 +28,10 @@ module BackendHelper
     Sorceror::Backend.stop_subscriber
     Sorceror::Backend.start_subscriber(:all)
   end
+
+  def process_operations!
+    Sorceror::Backend.driver.process
+  end
 end
 
 RSpec.configure do |config|

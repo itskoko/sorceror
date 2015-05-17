@@ -23,9 +23,11 @@ module Sorceror::Operation
           if operation.name == :create
             if instance.nil?
               instance = model.new(operation.attributes)
-            elsif instance.present?
-              Sorceror.warn "[#{message.type}][#{instance.id}] ignoring as already created"
-              return
+            else
+              if instance[:__op__]
+                Sorceror.warn "[#{message.type}][#{operation.name}][#{operation.id}] skipping as instance already created"
+                return
+              end
             end
           end
 
@@ -57,6 +59,9 @@ module Sorceror::Operation
           # a publish fails and there are subsequent publishes, the publish will
           # be repeated. This MAY NOT BE A PROBLEM.
           Sorceror::Backend.publish(payload_opts)
+
+          instance[:__op__] ||= true
+          raise "Unable to save" unless instance.mongoid_save
         end
       end
     rescue StandardError => e

@@ -60,6 +60,16 @@ module Sorceror::Model
 
     self.publish_operation(:create, -> { self.as_json })
 
+    begin
+      self.mongoid_save
+    rescue => e
+      if e.message =~ /E11000/
+        Sorceror.warn "[#{self.class}][#{self.id}] ignoring already created instance"
+      else
+        raise e
+      end
+    end
+
     self
   end
 

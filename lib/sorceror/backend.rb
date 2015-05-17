@@ -1,6 +1,6 @@
 module Sorceror::Backend
   extend Sorceror::Autoload
-  autoload :Poseidon, :Null, :Inline
+  autoload :Poseidon, :Null, :Inline, :Fake
 
   class << self
     attr_accessor :driver
