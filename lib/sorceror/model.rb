@@ -100,15 +100,15 @@ module Sorceror::Model
       payload_opts = { :topic      => Sorceror::Config.operation_topic,
                        :topic_key  => topic_key,
                        :payload    => MultiJson.dump({
-                         :operations => @payloads.reverse,
+                         :operations => @payloads[-1..-1] + @payloads[0..-2],
                          :type       => self.class.to_s,
                        })
       }
 
       Sorceror::Backend.publish(payload_opts)
-    end
 
-    @published = true
+      @published = true
+    end
   end
 
   def topic_key
