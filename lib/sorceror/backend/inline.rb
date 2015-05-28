@@ -1,4 +1,6 @@
 class Sorceror::Backend::Inline
+  cattr_accessor :filter
+
   def connect
   end
 
@@ -15,8 +17,9 @@ class Sorceror::Backend::Inline
       Sorceror::Operation.process(message)
     elsif options[:topic] == Sorceror::Config.event_topic
       message = Sorceror::Message::Event.new(options[:payload], :metadata => MetaData)
+
       Sorceror::Observer.observer_groups.each do |group, _|
-        Sorceror::Event.process(message, group)
+        Sorceror::Event.process(message, group, filter)
       end
     else
       raise "Invalid payload attributes to publish #{options}"

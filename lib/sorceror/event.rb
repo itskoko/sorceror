@@ -1,5 +1,5 @@
 module Sorceror::Event
-  def self.process(message, group_name)
+  def self.process(message, group_name, filter=//)
     retries = 0
     retry_max = 50 # TODO Make constants
 
@@ -17,7 +17,7 @@ module Sorceror::Event
 
             model_observer_groups.each do |group, model_observers|
               unless instance["__#{group}lk__"]
-                observers = model_observers.select { |ob| ob[:event] == event.to_sym }.map { |ob| ob[:name] }
+                observers = model_observers.select { |ob| ob[:event] == event.to_sym && ob[:name] =~ filter }.map { |ob| ob[:name] }
                 instance["__#{group}ob__"] ||= []
                 instance["__#{group}ob__"] += observers
               end
