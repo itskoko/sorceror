@@ -19,7 +19,11 @@ class Sorceror::Backend::Inline
       message = Sorceror::Message::Event.new(options[:payload], :metadata => MetaData)
 
       Sorceror::Observer.observer_groups.each do |group, _|
-        Sorceror::Event.process(message, group, filter)
+        if filter
+          Sorceror::Event.process(message, group, filter)
+        else
+          Sorceror::Event.process(message, group)
+        end
       end
     else
       raise "Invalid payload attributes to publish #{options}"

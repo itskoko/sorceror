@@ -35,11 +35,15 @@ module Sorceror::Operation
             raise "[#{message.type}][#{operation.name}][#{operation.id}] unable to find instance. Something is wrong!"
           end
 
-          events[instance] ||= []
-          events[instance] << operation_event
-
           args = [instance, operation.attributes][0...operation_proc.arity]
-          operation_proc.call(*args)
+
+          context = Context.new(operation_proc, args)
+          context.execute
+
+          unless context.skipped
+            events[instance] ||= []
+            events[instance] << operation_event
+          end
 
           raise "Unable to save" unless instance.mongoid_save
         end
@@ -75,4 +79,28 @@ module Sorceror::Operation
       end
     end
   end
+
+  class Context
+    attr_reader :skipped
+
+    def initialize(block, args)
+      @block = block
+      @args = args
+      @skipped = false
+    end
+
+    def execute
+      self.instance_exec(*@args, &@block)
+    rescue Skipped
+    end
+
+    def skip
+      @skipped = true
+      raise Skipped
+    end
+
+    class Skipped < Exception
+    end
+  end
 end
+
