@@ -209,6 +209,7 @@ class Sorceror::Backend::Poseidon
                                                   :trail        => Sorceror::Config.trail,
                                                   :max_bytes    => 2**20,
                                                   :min_bytes    => 0,
+                                                  :claim_timeout => 300,
                                                   :max_wait_ms  => 10)
 
         Sorceror.info "[distributor] Subscribed to topic:#{@topic} group:#{@group} [#{@consumer.id}]"
