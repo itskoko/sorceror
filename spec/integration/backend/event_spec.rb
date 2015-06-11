@@ -2,9 +2,9 @@ require 'spec_helper'
 
 RSpec.describe Sorceror do
   before do
-    $observer_fired   = false
+    $observer_fired   = 0
     $observer_raises  = false
-    $observer_started = false
+    $observer_starts  = 0
   end
 
   before do
@@ -28,31 +28,47 @@ RSpec.describe Sorceror do
       group :basic
 
       observer :fired, BasicModel => :fired do |model|
-        $observer_started = true
+        $observer_starts += 1
         raise if $observer_raises
-        $observer_fired = true
+        $observer_fired += 1
       end
     end
   end
 
-  before { use_backend(:poseidon) { |config| config.retry = retry_on_error } }
+  before { use_backend(:real) { |config| config.retry = retry_on_error } }
   before { run_subscriber_worker! }
 
   describe 'observer to an event' do
     let(:retry_on_error) { false }
+    let(:id)             { BSON::ObjectId.new }
+
+    before do
+      BasicModel.new(id: id).create
+      BasicModel.new(id: id).fire
+    end
 
     context 'when the observer runs successfully' do
       it 'runs the observer' do
-        id = BSON::ObjectId.new
-        BasicModel.new(id: id).create
-        BasicModel.new(id: id).fire
-
         eventually do
-          expect($observer_started).to eq(true)
+          expect($observer_starts).to eq(1)
         end
 
         eventually do
-          expect($observer_fired).to eq(true)
+          expect($observer_fired).to eq(1)
+        end
+      end
+
+      context 'when the subscriber is restarted' do
+        before do
+          wait_for { expect($observer_fired).to eq(1) }
+          Sorceror::Backend.stop_subscriber
+          Sorceror::Backend.start_subscriber(:all)
+        end
+
+        it 'does not reprocess the message' do
+          sleep 1
+
+          expect($observer_starts).to eq(1)
         end
       end
     end
@@ -64,16 +80,26 @@ RSpec.describe Sorceror do
         let(:retry_on_error) { false }
 
         it "doesn't run the observer" do
-          id = BSON::ObjectId.new
-          BasicModel.new(id: id).create
-          BasicModel.new(id: id).fire
-
           eventually do
-            expect($observer_started).to eq(true)
+            expect($observer_starts).to eq(1)
           end
 
           eventually do
-            expect($observer_fired).to eq(false)
+            expect($observer_fired).to eq(0)
+          end
+        end
+
+        context 'when the subscriber is restarted' do
+          before do
+            wait_for { expect($observer_starts).to eq(1) }
+            Sorceror::Backend.stop_subscriber
+            Sorceror::Backend.start_subscriber(:all)
+          end
+
+          it 'reprocesses the message' do
+            sleep 1
+
+            expect($observer_starts).to eq(2)
           end
         end
       end
@@ -82,18 +108,14 @@ RSpec.describe Sorceror do
         let(:retry_on_error) { true }
 
         it "retries until the operation succeeds" do
-          id = BSON::ObjectId.new
-          BasicModel.new(id: id).create
-          BasicModel.new(id: id).fire
-
           eventually do
-            expect($observer_started).to eq(true)
+            expect($observer_starts).to eq(1)
           end
 
           $observer_raises = false
 
           eventually do
-            expect($observer_fired).to eq(true)
+            expect($observer_fired).to eq(1)
           end
         end
       end

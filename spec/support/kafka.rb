@@ -1,3 +1,6 @@
+require 'poseidon'
+require 'zk'
+
 module KafkaHelper
   def advance_offsets_forward!
     zk = ZK.new(Sorceror::Config.zookeeper_hosts.join(','))
@@ -55,7 +58,7 @@ if ENV['POSEIDON_LOGGER_LEVEL']
 end
 
 RSpec.configure do |config|
-  if config.files_to_run.grep(/poseidon/).present?
+  if config.files_to_run.grep(/backend/).present?
     config.before(:suite) do
       $tc ||= KafkaHarness.new
       $tc.start

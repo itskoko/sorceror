@@ -3,6 +3,10 @@ class Sorceror::Backend::Fake
     @operations = []
   end
 
+  def is_real?
+    false
+  end
+
   def connect
   end
 

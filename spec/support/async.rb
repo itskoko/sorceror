@@ -13,4 +13,5 @@ module AsyncHelper
       sleep interval.to_f
     end
   end
+  alias_method :wait_for, :eventually
 end

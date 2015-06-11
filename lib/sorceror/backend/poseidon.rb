@@ -2,12 +2,16 @@ require 'poseidon'
 require 'poseidon_cluster'
 
 class Sorceror::Backend::Poseidon
-  attr_accessor :connection, :connection_lock
+  attr_accessor :connection
 
   def initialize
     # The poseidon socket doesn't like when multiple threads access to it apparently
     @connection_lock = Mutex.new
     @distributor_threads = []
+  end
+
+  def is_real?
+    true
   end
 
   def new_connection

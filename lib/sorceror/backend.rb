@@ -1,6 +1,6 @@
 module Sorceror::Backend
   extend Sorceror::Autoload
-  autoload :Poseidon, :Null, :Inline, :Fake
+  autoload :Poseidon, :Null, :Inline, :Fake, :JrubyKafka
 
   class << self
     attr_accessor :driver

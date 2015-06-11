@@ -18,9 +18,10 @@ Gem::Specification.new do |s|
 
   s.add_dependency "activesupport", ">= 4"
   s.add_dependency "activemodel", ">= 4"
+  s.add_dependency "multi_json", "~> 1.8"
+
   s.add_dependency "poseidon", "~> 0.0.5"
   s.add_dependency "sorceror_poseidon_cluster", "~> 0.4.2"
-  s.add_dependency "multi_json", "~> 1.8"
 
   s.files        = Dir["lib/**/*"] + Dir["bin/**/*"]
   s.require_path = 'lib'

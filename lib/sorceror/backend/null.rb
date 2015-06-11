@@ -2,6 +2,10 @@ class Sorceror::Backend::Null
   def connect
   end
 
+  def is_real?
+    false
+  end
+
   def disconnect
   end
 

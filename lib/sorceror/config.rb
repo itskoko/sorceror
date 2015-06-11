@@ -4,7 +4,16 @@ module Sorceror::Config
                  :error_notifier, :retry, :trail
 
   def self.backend=(value)
+    if value == :real
+      if RUBY_PLATFORM == 'java'
+        value = :jruby_kafka
+      else
+        value = :poseidon
+      end
+    end
+
     @@backend = value
+
     Sorceror::Backend.driver = value
   end
 

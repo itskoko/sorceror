@@ -1,6 +1,10 @@
 class Sorceror::Backend::Inline
   cattr_accessor :filter
 
+  def is_real?
+    false
+  end
+
   def connect
   end
 

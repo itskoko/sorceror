@@ -9,6 +9,7 @@ module BackendHelper
       config.kafka_hosts = kafka_hosts
       config.zookeeper_hosts = zookeeper_hosts
       config.subscriber_threads = 1
+      config.trail = false
       block.call(config) if block
     end
     Sorceror.connect
@@ -19,11 +20,10 @@ module BackendHelper
       config.backend = backend
       block.call(config) if block
     end
-
   end
 
   def run_subscriber_worker!
-    advance_offsets_forward! if Sorceror::Backend.driver.is_a? Sorceror::Backend::Poseidon
+    advance_offsets_forward! if Sorceror::Backend.driver.is_real?
 
     Sorceror::Backend.stop_subscriber
     Sorceror::Backend.start_subscriber(:all)
