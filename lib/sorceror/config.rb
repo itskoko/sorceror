@@ -6,8 +6,10 @@ module Sorceror::Config
   def self.backend=(value)
     if value == :real
       if RUBY_PLATFORM == 'java'
+        require_manually 'jruby-kafka', '"sorceror_jruby-kafka", "~> 2.0.0"'
         value = :jruby_kafka
       else
+        require_manually 'poseidon_cluster', '"sorceror_poseidon_cluster", "~> 0.4.2"'
         value = :poseidon
       end
     end
@@ -15,6 +17,15 @@ module Sorceror::Config
     @@backend = value
 
     Sorceror::Backend.driver = value
+  end
+
+  def self.require_manually(gem, install)
+    begin
+      require gem
+    rescue LoadError
+      puts "Add this to your Gemspec: #{install}"
+      exit
+    end
   end
 
   def self.reset
@@ -26,7 +37,7 @@ module Sorceror::Config
     block.call(self) if block
 
     self.app                  ||= Rails.application.class.parent_name.underscore rescue nil if defined?(Rails)
-    self.backend              ||= :poseidon
+    self.backend              ||= :real
     self.kafka_hosts          ||= ['localhost:9092']
     self.zookeeper_hosts      ||= ['localhost:2181']
     self.operation_topic      ||= "#{self.app}.operations"

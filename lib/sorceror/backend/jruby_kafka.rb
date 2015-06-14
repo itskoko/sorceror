@@ -52,7 +52,7 @@ class Sorceror::Backend::JrubyKafka
     if consumer.in?([:all, :event])
       Sorceror::Observer.observer_groups.each do |group, options|
         @distributors << Distributor::Event.new(topic: Sorceror::Config.event_topic, group: group, threads: @threads, options: options)
-        Sorceror.info "[distributor:event] Starting #{@threads} topic:#{Sorceror::Config.event_topic} and group:#{group}"
+        Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
     end
   end
@@ -60,18 +60,16 @@ class Sorceror::Backend::JrubyKafka
   def stop_subscriber
     return unless @distributors
 
-    Sorceror.info "[distributor] Stopping #{@distributors.count} threads"
-
     @distributors.each { |distributor| distributor.stop }
     @distributors = nil
   end
 
   def subscriber_stopped?
-    @distributor.nil?
+    @distributors.nil?
   end
 
   def show_stop_status(num_requests)
-    @distributor.to_a.each { |distributor| distributor.show_stop_status(num_requests) }
+    @distributors.to_a.each { |distributor| distributor.show_stop_status(num_requests) }
   end
 
   private
@@ -148,8 +146,6 @@ class Sorceror::Backend::JrubyKafka
         connect(topic: options.fetch(:topic),
                 group: Sorceror::Config.app,
                 trail: Sorceror::Config.trail)
-
-        Sorceror.info "[distributor] Subscribed to topic:#{@topic} group:#{@group}"
       end
 
       def process(payload, metadata)
@@ -165,8 +161,6 @@ class Sorceror::Backend::JrubyKafka
         connect(topic: options.fetch(:topic),
                 group: "#{Sorceror::Config.app}.#{@group_name}",
                 trail: options.fetch(:trail, false))
-
-        Sorceror.info "[distributor] Subscribed to topic:#{@topic} group:#{@group}"
       end
 
       def process(payload, metadata)

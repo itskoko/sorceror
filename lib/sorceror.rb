@@ -74,5 +74,7 @@ module Sorceror
     end
   end
 
-  at_exit { self.disconnect rescue nil }
+  at_exit do
+    self.disconnect rescue nil
+  end
 end

@@ -1,49 +1,6 @@
 class Sorceror::CLI
   attr_accessor :options
 
-  def trap_debug_signals
-    Signal.trap 'SIGUSR2' do
-      # Using a thread because we cannot acquire mutexes in a trap context in
-      # ruby 2.0
-      Thread.new do
-        Thread.list.each do |thread|
-          next if Thread.current == thread
-
-          print_status  '----[ Threads ]----' + '-' * (100-19)
-          if thread.backtrace
-            print_status "Thread #{thread} #{thread['label']}"
-            print_status thread.backtrace.join("\n")
-          else
-            print_status "Thread #{thread} #{thread['label']} -- no backtrace"
-          end
-        end
-      end
-    end
-  end
-
-  def trap_exit_signals
-    %w(SIGTERM SIGINT).each do |signal|
-      Signal.trap(signal) do
-        # Using a thread because we cannot acquire mutexes in a trap context in
-        # ruby 2.0
-        Thread.new do
-          print_status "Exiting..."
-          if @stop
-            Sorceror::Backend.show_stop_status # XXX NOT WORKING
-          else
-            @stop = true
-            Sorceror::Backend.stop_subscriber
-          end
-        end.join
-      end
-    end
-  end
-
-  def trap_signals
-    trap_debug_signals
-    trap_exit_signals
-  end
-
   def subscribe
     Sorceror::Backend.start_subscriber(options[:args].first.try(:to_sym))
     Sorceror::Config.subscriber_threads.tap do |threads|
@@ -151,5 +108,17 @@ class Sorceror::CLI
   def print_status(msg)
     Sorceror.info msg
     STDERR.puts msg
+  end
+
+  def trap_signals
+    %w(SIGINT).each do |signal|
+      Signal.trap(signal) do
+        Thread.new do
+          print_status "Shutting down..."
+          Sorceror.disconnect
+        end.join
+        exit 0
+      end
+    end
   end
 end

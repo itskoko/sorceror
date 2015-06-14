@@ -35,8 +35,8 @@ module Sorceror::Backend
 
     def disconnect
       return unless @driver
+      @driver.stop_subscriber
       @driver.disconnect
-      @driver.terminate if @driver.respond_to?(:terminate)
       @driver = nil
     end
 
@@ -45,7 +45,12 @@ module Sorceror::Backend
       driver.new_connection(*args)
     end
 
-    delegate :connected?, :stop_subscriber, :subscriber_stopped?, :to => :driver
+    def subscriber_stopped?
+      return true unless @driver
+      driver.subscriber_stopped?
+    end
+
+    delegate :connected?, :stop_subscriber, :to => :driver
 
     def publish(*args)
       ensure_connected
@@ -54,7 +59,7 @@ module Sorceror::Backend
 
     def start_subscriber(consumer)
       consumer ||= :all
-      raise "Unknown operation #{topic}. Must be one of all, operation or event." unless consumer.in? [:all, :operation, :event]
+      raise "Unknown operation #{consumer}. Must be one of all, operation or event." unless consumer.in? [:all, :operation, :event]
 
       ensure_connected
       driver.start_subscriber(consumer)

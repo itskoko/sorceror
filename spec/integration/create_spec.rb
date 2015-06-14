@@ -57,14 +57,14 @@ RSpec.describe Sorceror, 'create' do
     before { allow_any_instance_of(CreateModel).to receive(:mongoid_save).and_raise("DB DOWN!!!") }
 
     it 'the operation fails' do
-      expect { CreateModel.new(id: BSON::ObjectId.new, field_1: 'field_1', field_2: 1).create }.to raise_error
+      expect { CreateModel.new(id: BSON::ObjectId.new, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
     end
 
     context 'and the operation is posted again' do
       it 'succeeds but the initial operation is processed' do
         id = BSON::ObjectId.new
 
-        expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error
+        expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
 
         allow_any_instance_of(CreateModel).to receive(:mongoid_save).and_call_original
 
@@ -86,7 +86,7 @@ RSpec.describe Sorceror, 'create' do
 
     it 'the operation fails, an event is not published and an instance is not created' do
       id = BSON::ObjectId.new
-      expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error
+      expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
 
       process_operations!
 
@@ -97,7 +97,7 @@ RSpec.describe Sorceror, 'create' do
     context 'and the operation is posted again with different attributes but publishing succeeds' do
       it 'the instance is created with the new attributes and the event is published' do
         id = BSON::ObjectId.new
-        expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error
+        expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
 
         allow(Sorceror::Backend).to receive(:publish).and_call_original
 
@@ -119,7 +119,7 @@ RSpec.describe Sorceror, 'create' do
 
       allow(Sorceror::Backend).to receive(:publish).and_raise("Backend down!!!")
 
-      expect { process_operations! }.to raise_error
+      expect { process_operations! }.to raise_error(RuntimeError)
 
       allow(Sorceror::Backend).to receive(:publish).and_call_original
 
