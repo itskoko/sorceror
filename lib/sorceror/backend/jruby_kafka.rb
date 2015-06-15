@@ -13,8 +13,9 @@ class Sorceror::Backend::JrubyKafka
 
   def new_connection
     # TODO Check all settings. Needs to be sync to all ISR.
-    @connection = Kafka::Producer.new(:broker_list       => Sorceror::Config.kafka_hosts.join(','),
-                                      "serializer.class" => "kafka.serializer.StringEncoder")
+    options = Sorceror::Config.publisher_options.merge(:broker_list       => Sorceror::Config.kafka_hosts.join(','),
+                                                       "serializer.class" => "kafka.serializer.StringEncoder")
+    @connection = Kafka::Producer.new(options)
     @connection.tap(&:connect)
   end
 
@@ -98,12 +99,14 @@ class Sorceror::Backend::JrubyKafka
       @group = options.fetch(:group)
       @trail = options.fetch(:trail)
 
-      @consumer = Kafka::Group.new(:topic_id => @topic,
-                                   :zk_connect => Sorceror::Config.zookeeper_hosts.join(','),
-                                   :group_id => @group,
-                                   :auto_commit_enable => "false",
-                                   :auto_offset_reset => @trail ? 'largest' : 'smallest',
-                                   :consumer_restart_on_error => "false")
+      options = Sorceror::Config.subscriber_options.merge(:topic_id => @topic,
+                                                          :zk_connect => Sorceror::Config.zookeeper_hosts.join(','),
+                                                          :group_id => @group,
+                                                          :auto_commit_enable => "false",
+                                                          :auto_offset_reset => @trail ? 'largest' : 'smallest',
+                                                          :consumer_restart_on_error => "false")
+
+      @consumer = Kafka::Group.new(options)
 
     end
 

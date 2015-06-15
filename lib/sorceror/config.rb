@@ -1,7 +1,7 @@
 module Sorceror::Config
   mattr_accessor :app, :backend, :kafka_backend, :kafka_hosts, :zookeeper_hosts,
                  :logger, :subscriber_threads, :operation_topic, :event_topic,
-                 :error_notifier, :retry, :trail
+                 :error_notifier, :retry, :trail, :subscriber_options, :publisher_options
 
   def self.backend=(value)
     if value == :real
@@ -47,6 +47,8 @@ module Sorceror::Config
     self.error_notifier       ||= proc {}
     self.retry                ||= nil
     self.trail                ||= false
+    self.subscriber_options   ||= {}
+    self.publisher_options    ||= {}
   end
 
   def self.configure(&block)
