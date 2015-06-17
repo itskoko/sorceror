@@ -1,7 +1,11 @@
 language: ruby
+jdk:
+  - oraclejdk8
 rvm:
-  - 2.1.5
   - 2.2.0
+  - jruby-9.0.0.0.rc1
+before_install:
+  - 'chmod +xw /home/travis/.rvm/gems/jruby-9.0.0.0.rc1@global/gems/ruby-maven-libs-3.3.3/maven-home/bin/mvn || :'
 script: bundle exec rspec spec
 services:
   - mongodb
