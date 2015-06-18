@@ -21,6 +21,8 @@ module Sorceror::Event
                 instance["__#{group}ob__"] ||= []
                 instance["__#{group}ob__"] += observers
               end
+              # TODO 1) Lock using the ID + Timestamp + Sequence Number
+              #      2) Steal lock if Now - Timestamp > Expriation Time (30s) AND Sequence Number in Message > Sequence Number
               instance["__#{group}lk__"] = true
             end
 
@@ -52,6 +54,10 @@ module Sorceror::Event
         retries += 1
         sleep 0.1 * 3**retries
         retry
+      else
+        # TODO What happens??? Just block indefinitely? Perhaps a CLI mechanism
+        # to manually clear an offset?
+        # to clear this?
       end
     end
   end

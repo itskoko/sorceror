@@ -64,6 +64,10 @@ module Sorceror::Operation
           # be repeated. This MAY NOT BE A PROBLEM.
           Sorceror::Backend.publish(payload_opts)
 
+          # TODO Use a offset/version number (perhaps stored on doc). Use to
+          # ignore already processed messages and protect against another
+          # processing during a rebalance.
+
           instance[:__op__] ||= true
           raise "Unable to save" unless instance.mongoid_save
         end
