@@ -49,13 +49,13 @@ module Sorceror::Operation
         end
 
         events.each do |instance, event_names|
-          payload_opts = { :topic      => Sorceror::Config.event_topic,
-                           :topic_key  => instance.topic_key,
-                           :payload    => MultiJson.dump({
-                             :id         => instance.id,
-                             :events     => event_names,
-                             :attributes => instance.as_json,
-                             :type       => instance.class.to_s,
+          payload_opts = { :topic         => Sorceror::Config.event_topic,
+                           :partition_key => instance.partition_key,
+                           :payload       => MultiJson.dump({
+                             :id          => instance.id,
+                             :events      => event_names,
+                             :attributes  => instance.as_json,
+                             :type        => instance.class.to_s,
                            })
           }
 

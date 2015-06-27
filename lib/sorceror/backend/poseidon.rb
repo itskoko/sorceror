@@ -95,8 +95,8 @@ class Sorceror::Backend::Poseidon
 
   def raw_publish(options)
     tries ||= 5
-    if @connection.send_messages([Poseidon::MessageToSend.new(options[:topic], options[:payload], options[:topic_key])])
-      Sorceror.info "[publish] [kafka] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
+    if @connection.send_messages([Poseidon::MessageToSend.new(options[:topic], options[:payload], options[:partition_key])])
+      Sorceror.info "[publish] [kafka] #{options[:topic]}/#{options[:partition_key]} #{options[:payload]}"
     else
       raise Sorceror::Error::Publisher.new(Exception.new('There were no messages to publish?'), :payload => options[:payload])
     end

@@ -76,8 +76,8 @@ class Sorceror::Backend::JrubyKafka
   private
 
   def raw_publish(options)
-    if @connection.send_msg(options[:topic], options[:topic_key], options[:payload])
-      Sorceror.info "[publish] [kafka] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
+    if @connection.send_msg(options[:topic], options[:partition_key], options[:payload])
+      Sorceror.info "[publish] [kafka] #{options[:topic]}/#{options[:partition_key]} #{options[:payload]}"
     end
   rescue StandardError => e
     raise Sorceror::Error::Publisher.new(e, :payload => options[:payload])

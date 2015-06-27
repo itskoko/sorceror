@@ -19,11 +19,11 @@ module DefineConstantMacros
 end
 
 RSpec.configure do |config|
-  config.before do
+  config.before(:each) do
     @defined_constants = []
   end
 
-  config.after do
+  config.after(:each) do
     @defined_constants.reverse.each do |path|
       namespace, class_name = *constant_path(path)
       namespace.send(:remove_const, class_name)

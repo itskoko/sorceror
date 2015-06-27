@@ -14,7 +14,7 @@ class Sorceror::Backend::Null
   end
 
   def publish(options={})
-    Sorceror.debug "[publish] [null] #{options[:topic]}/#{options[:topic_key]} #{options[:payload]}"
+    Sorceror.debug "[publish] [null] #{options[:topic]}/#{options[:partition_key]} #{options[:payload]}"
   end
 
   def start_subscriber(consumer)

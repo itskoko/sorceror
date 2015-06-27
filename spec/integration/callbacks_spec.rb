@@ -6,8 +6,6 @@ RSpec.describe Sorceror, 'callbacks' do
       include Mongoid::Document
       include Sorceror::Model
 
-      key :id
-
       field :field_1, type: Integer
 
       operation :operation_1 => :operation_1d do |instance|

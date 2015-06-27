@@ -13,7 +13,7 @@ module Sorceror::Model
 
     define_model_callbacks :operation, only: [:before]
 
-    mattr_accessor :partition_key
+    mattr_accessor :_partition_with
     mattr_accessor :operations
     self.operations = { create: { proc: -> _ {}, event: :created  } }
 
@@ -27,6 +27,8 @@ module Sorceror::Model
     Sorceror::Model.models[self.model_name.name] = self
 
     include Sorceror::Serializer
+
+    partition_with :self
   end
 
   class << self
@@ -39,8 +41,10 @@ module Sorceror::Model
       self.new(attributes).tap(&:create)
     end
 
-    def key(partition_key)
-      self.partition_key = partition_key
+    def partition_with(partition_with)
+      raise ArgumentError.new("#{partition_with} is not a relation on #{self}") unless (relations.keys << 'self').include?(partition_with.to_s)
+
+      self._partition_with = partition_with
     end
 
     def operation(defn, &block)
@@ -97,11 +101,11 @@ module Sorceror::Model
     @payloads << payload(name, attributes)
 
     unless @running_callbacks
-      payload_opts = { :topic      => Sorceror::Config.operation_topic,
-                       :topic_key  => topic_key,
-                       :payload    => MultiJson.dump({
-                         :operations => @payloads[-1..-1] + @payloads[0..-2],
-                         :type       => self.class.to_s,
+      payload_opts = { :topic         => Sorceror::Config.operation_topic,
+                       :partition_key => partition_key,
+                       :payload       => MultiJson.dump({
+                         :operations  => @payloads[-1..-1] + @payloads[0..-2],
+                         :type        => self.class.to_s,
                        })
       }
 
@@ -111,7 +115,15 @@ module Sorceror::Model
     end
   end
 
-  def topic_key
-    "#{model_name.plural}/#{self.send(partition_key)}"
+  def partition_key
+    if self._partition_with == :self
+      "#{model_name.plural}/#{self.id}"
+    else
+      # TODO If the partition field is nil reload. This is expensive as it loads
+      # the entire object. Consider:
+      #   1) Only loading the required fields
+      #   2) Caching the key on the object (PREFERRED)
+      (self.send(_partition_with) || self.reload.send(_partition_with)).partition_key
+    end
   end
 end

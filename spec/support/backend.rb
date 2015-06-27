@@ -36,7 +36,7 @@ end
 
 RSpec.configure do |config|
   config.after do
-    Sorceror::Backend.stop_subscriber
+    Sorceror::Backend.stop_subscriber if Sorceror::Backend.driver
     Sorceror::Observer.reset!
   end
 end

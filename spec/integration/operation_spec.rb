@@ -11,8 +11,6 @@ RSpec.describe Sorceror do
       include Mongoid::Document
       include Sorceror::Model
 
-      key :id
-
       field :field_1, type: String
       field :field_2, type: Integer
 
