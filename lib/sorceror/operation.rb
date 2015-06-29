@@ -45,7 +45,7 @@ module Sorceror::Operation
             events[instance] << operation_event
           end
 
-          raise "Unable to save" unless instance.mongoid_save
+          raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
         end
 
         events.each do |instance, event_names|
@@ -69,7 +69,8 @@ module Sorceror::Operation
           # processing during a rebalance.
 
           instance[:__op__] ||= true
-          raise "Unable to save" unless instance.mongoid_save
+
+          raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
         end
       end
     rescue StandardError => e
