@@ -1,11 +1,8 @@
-module Sorceror::Operation
-  # TODO  DRY up with Event using Processor super class perhaps
+module Sorceror::MessageProcessor::Operation
+  extend Sorceror::MessageProcessor
 
   def self.process(message)
-    retries = 0
-    retry_max = 50 # TODO Make constants
-
-    begin
+    retrying do
       if model = Sorceror::Model.models[message.type]
 
         events = {}
@@ -49,20 +46,18 @@ module Sorceror::Operation
         end
 
         events.each do |instance, event_names|
-          payload_opts = { :topic         => Sorceror::Config.event_topic,
-                           :partition_key => instance.partition_key,
-                           :payload       => MultiJson.dump({
-                             :id          => instance.id,
-                             :events      => event_names,
-                             :attributes  => instance.as_json,
-                             :type        => instance.class.to_s,
-                           })
-          }
+          message = Sorceror::Message::Event.new(:partition_key => instance.partition_key,
+                                                 :payload       => {
+                                                   :id          => instance.id,
+                                                   :events      => event_names,
+                                                   :attributes  => instance.as_json,
+                                                   :type        => instance.class.to_s,
+                                                 })
 
           # XXX Not idempotent (multiple instances so multiple publishes, so if
           # a publish fails and there are subsequent publishes, the publish will
           # be repeated. This MAY NOT BE A PROBLEM.
-          Sorceror::Backend.publish(payload_opts)
+          Sorceror::Backend.publish(message)
 
           # TODO Use a offset/version number (perhaps stored on doc). Use to
           # ignore already processed messages and protect against another
@@ -72,15 +67,6 @@ module Sorceror::Operation
 
           raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
         end
-      end
-    rescue StandardError => e
-      Sorceror::Config.error_notifier.call(e)
-      raise e unless Sorceror::Config.retry
-
-      if retries < retry_max
-        retries += 1
-        sleep 0.1 * 3**retries
-        retry
       end
     end
   end
@@ -108,4 +94,3 @@ module Sorceror::Operation
     end
   end
 end
-

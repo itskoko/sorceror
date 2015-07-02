@@ -101,15 +101,13 @@ module Sorceror::Model
     @payloads << payload(name, attributes)
 
     unless @running_callbacks
-      payload_opts = { :topic         => Sorceror::Config.operation_topic,
-                       :partition_key => partition_key,
-                       :payload       => MultiJson.dump({
-                         :operations  => @payloads[-1..-1] + @payloads[0..-2],
-                         :type        => self.class.to_s,
-                       })
-      }
+      message = Sorceror::Message::Operation.new(:partition_key => partition_key,
+                                                 :payload       => {
+                                                   :operations  => @payloads[-1..-1] + @payloads[0..-2],
+                                                   :type        => self.class.to_s,
+                                                 })
 
-      Sorceror::Backend.publish(payload_opts)
+      Sorceror::Backend.publish(message)
 
       @published = true
     end

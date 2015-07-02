@@ -43,16 +43,15 @@ class Sorceror::Backend::Poseidon
     @connection.present?
   end
 
-  def publish(options={})
+  def publish(message)
     Sorceror.ensure_connected
 
     @connection_lock.synchronize do
-      raw_publish(options)
-      options[:on_confirm].call if options[:on_confirm]
+      raw_publish(message)
     end
   rescue StandardError => e
     Sorceror.warn("[publish] Failure publishing to kafka #{e}\n#{e.backtrace.join("\n")}")
-    raise Sorceror::Error::Publisher.new(e, :payload => options[:payload])
+    raise Sorceror::Error::Publisher.new(e, :payload => message.payload)
   end
 
   def start_subscriber(consumer)
@@ -93,12 +92,12 @@ class Sorceror::Backend::Poseidon
 
   private
 
-  def raw_publish(options)
+  def raw_publish(message)
     tries ||= 5
-    if @connection.send_messages([Poseidon::MessageToSend.new(options[:topic], options[:payload], options[:partition_key])])
-      Sorceror.info "[publish] [kafka] #{options[:topic]}/#{options[:partition_key]} #{options[:payload]}"
+    if @connection.send_messages([Poseidon::MessageToSend.new(message.topic, message.to_s, message.partition_key)])
+      Sorceror.info "[publish] [kafka] #{message.topic}/#{message.partition_key} #{message.payload}"
     else
-      raise Sorceror::Error::Publisher.new(Exception.new('There were no messages to publish?'), :payload => options[:payload])
+      raise Sorceror::Error::Publisher.new(Exception.new('There were no messages to publish?'), :payload => message.payload)
     end
   rescue Poseidon::Errors::UnableToFetchMetadata => e
     Sorceror.error "[publish] [kafka] Unable to fetch metadata from the cluster (#{tries} tries left)"
@@ -108,7 +107,7 @@ class Sorceror::Backend::Poseidon
       raise e
     end
   rescue StandardError => e
-    raise Sorceror::Error::Publisher.new(e, :payload => options[:payload])
+    raise Sorceror::Error::Publisher.new(e, :payload => message.payload)
   end
 
   class DistributorThread
@@ -223,9 +222,8 @@ class Sorceror::Backend::Poseidon
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} partition:#{metadata.partition} #{@consumer.id}"
 
-        message = Sorceror::Message::Operation.new(payload.value, :metadata => metadata)
-        Sorceror::Operation.process(message)
-        message.ack
+        Sorceror::MessageProcessor.process(Sorceror::Message::Operation.new(payload: payload.value, partition_key: payload.key))
+        metadata.ack
       end
     end
 
@@ -253,9 +251,8 @@ class Sorceror::Backend::Poseidon
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
-        message = Sorceror::Message::Event.new(payload.value, :metadata => metadata)
-        Sorceror::Event.process(message, @group_name)
-        message.ack
+        Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload.value, partition_key: payload.key), @group_name, //)
+        metadata.ack
       end
     end
   end

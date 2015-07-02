@@ -1,9 +1,8 @@
-module Sorceror::Event
-  def self.process(message, group_name, filter=//)
-    retries = 0
-    retry_max = 50 # TODO Make constants
+module Sorceror::MessageProcessor::Event
+  extend Sorceror::MessageProcessor
 
-    begin
+  def self.process(message, group_name, filter)
+    retrying do
       if model = Sorceror::Model.models[message.type]
         instance = model.where(id: message.id).first
 
@@ -44,20 +43,6 @@ module Sorceror::Event
             raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
           end
         end
-      end
-    rescue StandardError => e
-      Sorceror::Config.error_notifier.call(e)
-      raise e unless Sorceror::Config.retry
-
-      # TODO XXX Need a way to exit if the subscriber has been stopped
-      if retries < retry_max
-        retries += 1
-        sleep 0.1 * 3**retries
-        retry
-      else
-        # TODO What happens??? Just block indefinitely? Perhaps a CLI mechanism
-        # to manually clear an offset?
-        # to clear this?
       end
     end
   end

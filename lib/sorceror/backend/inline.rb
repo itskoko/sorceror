@@ -15,22 +15,19 @@ class Sorceror::Backend::Inline
     true
   end
 
-  def publish(options={})
-    if options[:topic] == Sorceror::Config.operation_topic
-      message = Sorceror::Message::Operation.new(options[:payload], :metadata => MetaData)
-      Sorceror::Operation.process(message)
-    elsif options[:topic] == Sorceror::Config.event_topic
-      message = Sorceror::Message::Event.new(options[:payload], :metadata => MetaData)
+  def publish(message)
+    # Serialize -> Deserialize: ensures real backend is mimicked
+    marshalled_message = message.class.new(payload: message.to_s,
+                                           partition_key: message.partition_key)
 
-      Sorceror::Observer.observer_groups.each do |group, _|
-        if filter
-          Sorceror::Event.process(message, group, filter)
-        else
-          Sorceror::Event.process(message, group)
-        end
+    if message.class == Sorceror::Message::Operation
+      Sorceror::MessageProcessor.process(marshalled_message)
+    elsif message.class == Sorceror::Message::Event
+      Sorceror::Observer.observer_groups.keys.each do |group|
+        Sorceror::MessageProcessor.process(marshalled_message, group, filter || //)
       end
     else
-      raise "Invalid payload attributes to publish #{options}"
+      raise "Unknown message class #{message.class}"
     end
   end
 
@@ -38,10 +35,5 @@ class Sorceror::Backend::Inline
   end
 
   def stop_subscriber
-  end
-
-  class MetaData
-    def self.ack
-    end
   end
 end

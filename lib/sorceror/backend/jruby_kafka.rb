@@ -31,13 +31,13 @@ class Sorceror::Backend::JrubyKafka
     @connection.present?
   end
 
-  def publish(options={})
+  def publish(message)
     Sorceror.ensure_connected
 
-    raw_publish(options)
+    raw_publish(message)
   rescue StandardError => e
     Sorceror.warn("[publish] Failure publishing to kafka #{e}\n#{e.backtrace.join("\n")}")
-    raise Sorceror::Error::Publisher.new(e, :payload => options[:payload])
+    raise Sorceror::Error::Publisher.new(e, :payload => message.payload)
   end
 
   def start_subscriber(consumer)
@@ -75,12 +75,12 @@ class Sorceror::Backend::JrubyKafka
 
   private
 
-  def raw_publish(options)
-    if @connection.send_msg(options[:topic], options[:partition_key], options[:payload])
-      Sorceror.info "[publish] [kafka] #{options[:topic]}/#{options[:partition_key]} #{options[:payload]}"
+  def raw_publish(message)
+    if @connection.send_msg(message.topic, message.partition_key, message.to_s)
+      Sorceror.info "[publish] [kafka] #{message.topic}/#{message.partition_key} #{message.to_s}"
     end
   rescue StandardError => e
-    raise Sorceror::Error::Publisher.new(e, :payload => options[:payload])
+    raise Sorceror::Error::Publisher.new(e, :payload => message.payload)
   end
 
   class Distributor
@@ -153,7 +153,7 @@ class Sorceror::Backend::JrubyKafka
 
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} partition:#{metadata.partition}"
-        Sorceror::Operation.process(Sorceror::Message::Operation.new(payload))
+        Sorceror::MessageProcessor.process(Sorceror::Message::Operation.new(payload: payload, partition_key: metadata.key))
       end
     end
 
@@ -168,7 +168,7 @@ class Sorceror::Backend::JrubyKafka
 
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
-        Sorceror::Event.process(Sorceror::Message::Event.new(payload, :metadata => metadata), @group_name)
+        Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload, partition_key: metadata.key), @group_name, //)
       end
     end
   end

@@ -22,7 +22,7 @@ module Sorceror
 
   extend Sorceror::Autoload
   autoload :Model, :Error, :Backend, :Config, :Message, :Worker,
-           :Operation, :Message, :Observer, :CLI, :Serializer, :Event
+           :MessageProcessor, :Message, :Observer, :CLI, :Serializer
 
   class << self
     def configure(&block)

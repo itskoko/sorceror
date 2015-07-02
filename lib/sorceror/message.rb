@@ -1,9 +1,10 @@
 class Sorceror::Message
-  attr_accessor :payload, :parsed_payload
+  attr_accessor :partition_key
+  attr_accessor :payload
 
-  def initialize(payload, options={})
-    self.payload = payload
-    @metadata = options[:metadata]
+  def initialize(options)
+    @payload       = options.fetch(:payload)
+    @partition_key = options.fetch(:partition_key)
   end
 
   def parsed_payload
@@ -14,19 +15,23 @@ class Sorceror::Message
     end
   end
 
+  def to_s
+    @to_s ||= MultiJson.dump(parsed_payload)
+  end
+
   def type
     parsed_payload['type']
   end
 
-  def ack
-    @metadata.ack
-  rescue StandardError => e
-    # We don't care if we fail, the message will be redelivered at some point
-    Sorceror.warn "[receive] Some exception happened, but it's okay: #{e}\n#{e.backtrace.join("\n")}"
-    Sorceror::Config.error_notifier.call(e)
+  def topic
+    raise NotImplementedError
   end
 
   class Operation < self
+    def topic
+      Sorceror::Config.operation_topic
+    end
+
     def operations
       parsed_payload['operations'].map { |op| Payload.new(op) }
     end
@@ -51,6 +56,10 @@ class Sorceror::Message
   end
 
   class Event < self
+    def topic
+      Sorceror::Config.event_topic
+    end
+
     def id
       parsed_payload['id']
     end

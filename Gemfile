@@ -14,5 +14,5 @@ gem "codeclimate-test-reporter", group: :test, require: nil
 gem "sorceror_poseidon_cluster", "~> 0.4.2"
 
 platform :jruby do
-  gem "sorceror_jruby-kafka", "~> 2.0.0"
+  gem "sorceror_jruby-kafka", "~> 2.1.0"
 end

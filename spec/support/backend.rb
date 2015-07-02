@@ -10,6 +10,7 @@ module BackendHelper
       config.zookeeper_hosts = zookeeper_hosts
       config.subscriber_threads = 1
       config.trail = false
+      config.error_notifier = -> e { Sorceror.info "#{e.message}\n#{e.backtrace.join("\n")}" }
       block.call(config) if block
     end
     Sorceror.connect

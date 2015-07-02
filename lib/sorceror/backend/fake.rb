@@ -1,6 +1,7 @@
 class Sorceror::Backend::Fake
   def initialize
-    @operations = []
+    @messages = []
+    @inline = Sorceror::Backend::Inline.new
   end
 
   def is_real?
@@ -17,36 +18,21 @@ class Sorceror::Backend::Fake
     true
   end
 
-  def publish(options={})
-    @operations << options
+  def publish(message)
+    @messages << message
   end
 
   def start_subscriber(consumer)
   end
 
   def stop_subscriber
-    @operations.clear
+    @messages.clear
   end
 
   def process
-    while options = @operations.first do
-      if options[:topic] == Sorceror::Config.operation_topic
-        message = Sorceror::Message::Operation.new(options[:payload], :metadata => MetaData)
-        Sorceror::Operation.process(message)
-      elsif options[:topic] == Sorceror::Config.event_topic
-        message = Sorceror::Message::Event.new(options[:payload], :metadata => MetaData)
-        Sorceror::Observer.observer_groups.each do |group, _|
-          Sorceror::Event.process(message, group)
-        end
-      else
-        raise "Invalid payload attributes to publish #{options}"
-      end
-      @operations.shift
-    end
-  end
-
-  class MetaData
-    def self.ack
+    while message = @messages.first do
+      @inline.publish(message)
+      @messages.shift
     end
   end
 end
