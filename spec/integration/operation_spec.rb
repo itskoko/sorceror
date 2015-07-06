@@ -2,8 +2,8 @@ require 'spec_helper'
 
 RSpec.describe Sorceror do
   before do
-    $observer_fired_count = 0
     $operation_fired_count = 0
+    $operation_raises      = false
   end
 
   before do
@@ -19,19 +19,11 @@ RSpec.describe Sorceror do
         $operation_fired_count += 1
       end
     end
-
-    define_constant :BasicObserver do
-      include Sorceror::Observer
-
-      group :basic
-
-      observer :fired, BasicModel => :fired do |model|
-        $observer_fired_count += 1
-      end
-    end
   end
 
-  before { use_backend(:inline) }
+  let(:retry_on_error) { false }
+
+  before { use_backend(:fake) { |config| config.retry = retry_on_error } }
 
   describe 'Operation execution' do
     let(:fire) do
@@ -39,25 +31,31 @@ RSpec.describe Sorceror do
       BasicModel.new(id: instance.id).fire
     end
 
-    context 'when not skipping' do
-      before { $skip = false }
+    describe 'skipping' do
+      context 'when not skipping' do
+        before { $skip = false }
 
-      it "publishes the operation" do
-        fire
+        it "publishes the operation" do
+          fire
 
-        expect($observer_fired_count).to  eq(1)
-        expect($operation_fired_count).to eq(1)
+          process_operations!
+
+          expect($operation_fired_count).to eq(1)
+        end
       end
-    end
 
-    context 'when skipping' do
-      before { $skip = true }
+      context 'when skipping' do
+        before { $skip = true }
 
-      it "does not publish the operation" do
-        fire
+        it "does not publish the operation" do
+          fire
 
-        expect($observer_fired_count).to  eq(0)
-        expect($operation_fired_count).to eq(0)
+          process_operations!
+
+          expect($operation_fired_count).to                       eq(0)
+          expect(Sorceror::Backend.driver.events.count).to        eq(1)
+          expect(Sorceror::Backend.driver.events.first.events).to eq([:created])
+        end
       end
     end
   end

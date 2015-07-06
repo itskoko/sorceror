@@ -30,8 +30,17 @@ module BackendHelper
     Sorceror::Backend.start_subscriber(:all)
   end
 
+  def process!
+    process_operations!
+    process_events!
+  end
+
   def process_operations!
-    Sorceror::Backend.driver.process
+    Sorceror::Backend.driver.process_operations
+  end
+
+  def process_events!
+    Sorceror::Backend.driver.process_events
   end
 end
 

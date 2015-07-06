@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-RSpec.describe Sorceror do
+RSpec.describe Sorceror::Backend, 'Event' do
   before do
     $observer_fired   = 0
     $observer_raises  = false
@@ -58,7 +58,7 @@ RSpec.describe Sorceror do
 
       context 'when the subscriber is restarted' do
         before do
-          wait_for { expect($observer_fired).to eq(1) }
+          wait_for { expect($observer_starts).to eq(1) }
           Sorceror::Backend.stop_subscriber
           Sorceror::Backend.start_subscriber(:all)
         end
@@ -69,23 +69,9 @@ RSpec.describe Sorceror do
           expect($observer_starts).to eq(1)
         end
       end
-    end
 
-    context 'when the observer raises' do
-      before { $observer_raises = true }
-
-      context 'without retrying' do
-        let(:retry_on_error) { false }
-
-        it "doesn't run the observer" do
-          eventually do
-            expect($observer_starts).to eq(1)
-          end
-
-          eventually do
-            expect($observer_fired).to eq(0)
-          end
-        end
+      context 'when the observer raises' do
+        before { $observer_raises = true }
 
         context 'when the subscriber is restarted' do
           before do
@@ -98,22 +84,6 @@ RSpec.describe Sorceror do
             sleep 1
 
             expect($observer_starts).to eq(2)
-          end
-        end
-      end
-
-      context 'with retrying' do
-        let(:retry_on_error) { true }
-
-        it "retries until the operation succeeds" do
-          eventually do
-            expect($observer_starts).to eq(1)
-          end
-
-          $observer_raises = false
-
-          eventually do
-            expect($observer_fired).to eq(1)
           end
         end
       end

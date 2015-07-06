@@ -1,10 +1,10 @@
 require 'spec_helper'
 
-RSpec.describe Sorceror do
+RSpec.describe Sorceror::Backend, 'Operation' do
   before do
-    $operation_raises      = false
-    $operation_starts      = 0
+    $operation_starts = 0
     $operation_completions = 0
+    $operation_raises = false
   end
 
   before do
@@ -17,8 +17,8 @@ RSpec.describe Sorceror do
 
       operation :update => :updated do |model, attributes|
         $operation_starts += 1
-        raise if $operation_raises
         model.assign_attributes(attributes)
+        raise if $operation_raises
         $operation_completions += 1
       end
     end
@@ -70,52 +70,24 @@ RSpec.describe Sorceror do
       it 'does not reprocess the message' do
         sleep 1
 
-        expect($operation_completions).to eq(1)
+        expect($operation_starts).to eq(1)
       end
     end
 
     context 'when the operation raises' do
       before { $operation_raises = true }
 
-      context 'without retrying' do
-        it "doesn't run the observer" do
-          eventually do
-            expect($operation_starts).to eq(1)
-          end
-
-          eventually do
-            expect($operation_completions).to eq(0)
-          end
+      context 'when the subscriber is restarted' do
+        before do
+          wait_for { $operation_starts == 1 }
+          Sorceror::Backend.stop_subscriber
+          Sorceror::Backend.start_subscriber(:all)
         end
 
-        context 'when the subscriber is restarted' do
-          before do
-            wait_for { expect($operation_starts).to eq(1) }
-            Sorceror::Backend.stop_subscriber
-            Sorceror::Backend.start_subscriber(:all)
-          end
+        it 'reprocesses the message' do
+          sleep 1
 
-          it 'reprocesses the message' do
-            sleep 1
-
-            expect($operation_starts).to eq(2)
-          end
-        end
-      end
-
-      context 'with retrying' do
-        let(:retry_on_error) { true }
-
-        it "retries until the operation succeeds" do
-          eventually do
-            expect($operation_starts).to eq(1)
-          end
-
-          $operation_raises = false
-
-          eventually do
-            expect($operation_completions).to eq(1)
-          end
+          expect($operation_starts).to eq(2)
         end
       end
     end

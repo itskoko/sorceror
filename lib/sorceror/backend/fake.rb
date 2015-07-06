@@ -1,6 +1,10 @@
 class Sorceror::Backend::Fake
+  attr_reader :operations
+  attr_reader :events
+
   def initialize
-    @messages = []
+    @operations = []
+    @events = []
     @inline = Sorceror::Backend::Inline.new
   end
 
@@ -19,20 +23,29 @@ class Sorceror::Backend::Fake
   end
 
   def publish(message)
-    @messages << message
+    @operations << message if message.is_a? Sorceror::Message::Operation
+    @events << message     if message.is_a? Sorceror::Message::Event
   end
 
   def start_subscriber(consumer)
   end
 
   def stop_subscriber
-    @messages.clear
+    @operations.clear
+    @events.clear
   end
 
-  def process
-    while message = @messages.first do
+  def process_operations
+    while message = @operations.first do
       @inline.publish(message)
-      @messages.shift
+      @operations.shift
+    end
+  end
+
+  def process_events
+    while message = @events.first do
+      @inline.publish(message)
+      @events.shift
     end
   end
 end

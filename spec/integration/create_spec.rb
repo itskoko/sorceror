@@ -36,7 +36,7 @@ RSpec.describe Sorceror, 'create' do
     end
 
     it "processes the first operation" do
-      process_operations!
+      process!
 
       expect($observer_fired_count).to        eq(1)
       expect(CreateModel.count).to            eq(1)
@@ -66,11 +66,11 @@ RSpec.describe Sorceror, 'create' do
 
         allow_any_instance_of(CreateModel).to receive(:mongoid_save).and_call_original
 
-        process_operations!
+        process!
 
         expect { CreateModel.new(id: id, field_1: 'another_field_1', field_2: 1).create }.to_not raise_error
 
-        process_operations!
+        process!
 
         expect($observer_fired_count).to        eq(1)
         expect(CreateModel.count).to            eq(1)
@@ -86,7 +86,7 @@ RSpec.describe Sorceror, 'create' do
       id = BSON::ObjectId.new
       expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
 
-      process_operations!
+      process!
 
       expect($observer_fired_count).to           eq(0)
       expect(CreateModel.where(id: id).count).to eq(0)
@@ -101,7 +101,7 @@ RSpec.describe Sorceror, 'create' do
 
         CreateModel.new(id: id, field_1: 'another_field_1', field_2: 1).create
 
-        process_operations!
+        process!
 
         expect($observer_fired_count).to        eq(1)
         expect(CreateModel.find(id).field_1).to eq('another_field_1')
@@ -117,11 +117,11 @@ RSpec.describe Sorceror, 'create' do
 
       allow(Sorceror::Backend).to receive(:publish).and_raise("Backend down!!!")
 
-      expect { process_operations! }.to raise_error(RuntimeError)
+      expect { process! }.to raise_error(RuntimeError)
 
       allow(Sorceror::Backend).to receive(:publish).and_call_original
 
-      process_operations!
+      process!
 
       expect($observer_fired_count).to eq(1)
     end
