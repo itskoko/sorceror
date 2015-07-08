@@ -7,10 +7,10 @@ module Sorceror::Config
   def self.backend=(value)
     if value == :real
       if RUBY_PLATFORM == 'java'
-        require_manually 'jruby-kafka', '"sorceror_jruby-kafka", "~> 2.1.0"'
+        require_manually 'jruby-kafka', 'sorceror_jruby-kafka', '~> 2.1.0'
         value = :jruby_kafka
       else
-        require_manually 'poseidon_cluster', '"sorceror_poseidon_cluster", "~> 0.4.2"'
+        require_manually 'poseidon_cluster', 'sorceror_poseidon_cluster', '~> 0.4.2'
         value = :poseidon
       end
     end
@@ -20,11 +20,12 @@ module Sorceror::Config
     Sorceror::Backend.driver = value
   end
 
-  def self.require_manually(gem, install)
+  def self.require_manually(gem, name, version)
     begin
       require gem
+      raise LoadError unless Gem::Requirement.create(version) === Gem.loaded_specs[name].version
     rescue LoadError
-      puts "Add this to your Gemspec: #{install}"
+      puts "Add this to your Gemspec: \"#{name}\", \"#{version}\""
       exit
     end
   end
