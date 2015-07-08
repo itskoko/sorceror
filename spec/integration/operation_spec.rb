@@ -21,9 +21,7 @@ RSpec.describe Sorceror do
     end
   end
 
-  let(:retry_on_error) { false }
-
-  before { use_backend(:fake) { |config| config.retry = retry_on_error } }
+  before { use_backend(:fake) }
 
   describe 'Operation execution' do
     let(:fire) do

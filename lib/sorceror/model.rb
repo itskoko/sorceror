@@ -62,7 +62,9 @@ module Sorceror::Model
   def create
     return false unless valid?
 
-    self.publish_operation(:create, -> { self.as_json })
+    run_callbacks(:create) do
+      self.publish_operation(:create, -> { self.as_json })
+    end
 
     begin
       self.mongoid_save

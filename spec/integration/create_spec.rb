@@ -10,8 +10,14 @@ RSpec.describe Sorceror, 'create' do
       include Mongoid::Document
       include Sorceror::Model
 
+      before_create :set_field2
+
       field :field_1, type: String
       field :field_2, type: Integer
+
+      def set_field2
+        self.field_2 = -1
+      end
     end
 
     define_constant :CreateObserver do
@@ -45,10 +51,20 @@ RSpec.describe Sorceror, 'create' do
   end
 
   it 'persists synchronously (does not require the subscriber running)' do
-    id = BSON::ObjectId.new
-    CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create
+    CreateModel.new(field_1: 'field_1', field_2: 1).create
 
     expect(CreateModel.unscoped.count).to eq(1)
+  end
+
+  context 'when the operation runs before persistence' do
+    before { use_backend(:inline) }
+
+    it 'runs create callbacks' do
+      id = BSON::ObjectId.new
+      CreateModel.new(id: id, field_1: 'field_1').create
+
+      expect(CreateModel.find(id).field_2).to eq(-1)
+    end
   end
 
   context 'when persistence fails' do

@@ -39,7 +39,8 @@ module Sorceror::MessageProcessor::Operation
           events[instance] << operation_event
         end
 
-        raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
+        # Upsert here as its possible that the the insert in Model#create interleaves this stage of the operation
+        raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.upsert
       end
 
       events.each do |instance, event_names|
