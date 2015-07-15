@@ -22,7 +22,7 @@ module Sorceror::MessageProcessor::Event
             instance["__#{group}lk__"] = true
           end
 
-          raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
+          instance.collection.find(instance.atomic_selector).update(instance.as_document)
 
           model_observer_groups.each do |group, model_observers|
             instance["__#{group}ob__"].each do |observer_name|
@@ -30,14 +30,14 @@ module Sorceror::MessageProcessor::Event
               observer[:proc].call(instance)
 
               instance["__#{group}ob__"] -= [observer_name]
-              raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
+              instance.collection.find(instance.atomic_selector).update(instance.as_document)
             end
           end
 
           model_observer_groups.each do |group, _|
             instance["__#{group}lk__"] = false
           end
-          raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
+          instance.collection.find(instance.atomic_selector).update(instance.as_document)
         end
       end
     end

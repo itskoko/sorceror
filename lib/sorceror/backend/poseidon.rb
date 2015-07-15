@@ -151,7 +151,7 @@ class Sorceror::Backend::Poseidon
         sleep 0.1
       end
     rescue StandardError => e
-      Sorceror.warn "[kafka] [distributor] died: #{e}\n#{e.backtrace.join("\n")}"
+      Sorceror.warn "[kafka] [distributor] died: #{e.message}\n#{e.backtrace.join("\n")}"
       Sorceror::Config.error_notifier.call(e)
     ensure
       disconnect

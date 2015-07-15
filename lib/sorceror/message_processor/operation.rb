@@ -40,7 +40,7 @@ module Sorceror::MessageProcessor::Operation
         end
 
         # Upsert here as its possible that the the insert in Model#create interleaves this stage of the operation
-        raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.upsert
+        instance.collection.find(instance.atomic_selector).update(instance.as_document, [ :upsert ])
       end
 
       events.each do |instance, event_names|
@@ -61,9 +61,7 @@ module Sorceror::MessageProcessor::Operation
         # ignore already processed messages and protect against another
         # processing during a rebalance.
 
-        instance[:__op__] ||= true
-
-        raise "Unable to save: #{instance.errors.full_messages.join('. ')}" unless instance.mongoid_save
+        instance.collection.find(instance.atomic_selector).update('$set' => { :__op__ => true })
       end
     end
   end

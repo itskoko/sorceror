@@ -37,7 +37,7 @@ module Sorceror::Model
   self.models = {}
 
   module ClassMethods
-    def create(attributes)
+    def create(attributes={})
       self.new(attributes).tap(&:create)
     end
 
@@ -62,12 +62,10 @@ module Sorceror::Model
   def create
     return false unless valid?
 
-    run_callbacks(:create) do
-      self.publish_operation(:create, -> { self.as_json })
-    end
+    self.publish_operation(:create, -> { self.as_json })
 
     begin
-      self.mongoid_save
+      self.send(:insert_as_root)
     rescue => e
       if e.message =~ /E11000/
         Sorceror.warn "[#{self.class}][#{self.id}] ignoring already created instance"
@@ -88,14 +86,12 @@ module Sorceror::Model
   end
 
   def publish_operation(name, attributes)
-    raise "Already published" if @published # TODO Use error classes
-    raise "Already persisted" if persisted?
-
     @payloads ||= []
 
     unless @running_callbacks
       @running_callbacks = true
-      run_callbacks :operation
+      run_before_callbacks :create if name == :create
+      run_before_callbacks :operation
       @running_callbacks = false
     end
 
@@ -105,13 +101,11 @@ module Sorceror::Model
     unless @running_callbacks
       message = Sorceror::Message::Operation.new(:partition_key => partition_key,
                                                  :payload       => {
-                                                   :operations  => @payloads[-1..-1] + @payloads[0..-2],
-                                                   :type        => self.class.to_s,
-                                                 })
+        :operations  => @payloads[-1..-1] + @payloads[0..-2],
+        :type        => self.class.to_s,
+      })
 
       Sorceror::Backend.publish(message)
-
-      @published = true
     end
   end
 

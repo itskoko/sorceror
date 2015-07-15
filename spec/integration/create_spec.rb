@@ -10,14 +10,8 @@ RSpec.describe Sorceror, 'create' do
       include Mongoid::Document
       include Sorceror::Model
 
-      before_create :set_field2
-
       field :field_1, type: String
       field :field_2, type: Integer
-
-      def set_field2
-        self.field_2 = -1
-      end
     end
 
     define_constant :CreateObserver do
@@ -56,19 +50,8 @@ RSpec.describe Sorceror, 'create' do
     expect(CreateModel.unscoped.count).to eq(1)
   end
 
-  context 'when the operation runs before persistence' do
-    before { use_backend(:inline) }
-
-    it 'runs create callbacks' do
-      id = BSON::ObjectId.new
-      CreateModel.new(id: id, field_1: 'field_1').create
-
-      expect(CreateModel.find(id).field_2).to eq(-1)
-    end
-  end
-
   context 'when persistence fails' do
-    before { allow_any_instance_of(CreateModel).to receive(:mongoid_save).and_raise("DB DOWN!!!") }
+    before { allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_raise("DB DOWN!!!") }
 
     it 'the operation fails' do
       expect { CreateModel.new(id: BSON::ObjectId.new, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
@@ -80,7 +63,7 @@ RSpec.describe Sorceror, 'create' do
 
         expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
 
-        allow_any_instance_of(CreateModel).to receive(:mongoid_save).and_call_original
+        allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_call_original
 
         process!
 

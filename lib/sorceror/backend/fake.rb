@@ -1,11 +1,11 @@
 class Sorceror::Backend::Fake
+  cattr_accessor :filter
   attr_reader :operations
   attr_reader :events
 
   def initialize
     @operations = []
     @events = []
-    @inline = Sorceror::Backend::Inline.new
   end
 
   def is_real?
@@ -36,16 +36,35 @@ class Sorceror::Backend::Fake
   end
 
   def process_operations
-    while message = @operations.first do
-      @inline.publish(message)
-      @operations.shift
+    while message = @operations.shift do
+      _publish(message)
     end
+  rescue => e
+    @operations.unshift(message) if message
+    raise e
   end
 
   def process_events
-    while message = @events.first do
-      @inline.publish(message)
-      @events.shift
+    while message = @events.shift do
+      _publish(message)
+    end
+  rescue => e
+    @operations.unshift(message) if message
+    raise e
+  end
+
+  def _publish(message)
+    marshalled_message = message.class.new(payload: message.to_s,
+                                           partition_key: message.partition_key)
+
+    if message.class == Sorceror::Message::Operation
+      Sorceror::MessageProcessor.process(marshalled_message)
+    elsif message.class == Sorceror::Message::Event
+      Sorceror::Observer.observer_groups.keys.each do |group|
+        Sorceror::MessageProcessor.process(marshalled_message, group, filter || //)
+      end
+    else
+      raise "Unknown message class #{message.class}"
     end
   end
 end

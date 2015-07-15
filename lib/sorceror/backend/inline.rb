@@ -1,6 +1,11 @@
 class Sorceror::Backend::Inline
   cattr_accessor :filter
 
+  def initialize
+    @fake = Sorceror::Backend::Fake.new
+    @running = false
+  end
+
   def is_real?
     false
   end
@@ -16,18 +21,17 @@ class Sorceror::Backend::Inline
   end
 
   def publish(message)
-    # Serialize -> Deserialize: ensures real backend is mimicked
-    marshalled_message = message.class.new(payload: message.to_s,
-                                           partition_key: message.partition_key)
+    @fake.publish(message)
 
-    if message.class == Sorceror::Message::Operation
-      Sorceror::MessageProcessor.process(marshalled_message)
-    elsif message.class == Sorceror::Message::Event
-      Sorceror::Observer.observer_groups.keys.each do |group|
-        Sorceror::MessageProcessor.process(marshalled_message, group, filter || //)
+    unless @running
+      @fake.filter = filter
+      @running = true
+      until @fake.operations.empty? && @fake.events.empty?
+        @fake.process_operations
+        @fake.process_events
       end
-    else
-      raise "Unknown message class #{message.class}"
+      @running = false
+      @fake.filter = nil
     end
   end
 
