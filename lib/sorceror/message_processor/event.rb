@@ -27,7 +27,9 @@ module Sorceror::MessageProcessor::Event
           model_observer_groups.each do |group, model_observers|
             instance["__#{group}ob__"].each do |observer_name|
               observer = Sorceror::Observer.observers_by_name[observer_name]
-              observer[:proc].call(model.new(message.attributes))
+              keys = model.fields.keys + ['id']
+
+              observer[:proc].call(model.new(message.attributes.slice(*keys)))
 
               instance["__#{group}ob__"] -= [observer_name]
               instance.collection.find(instance.atomic_selector).update(instance.as_document)
