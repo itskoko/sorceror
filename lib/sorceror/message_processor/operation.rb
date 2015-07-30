@@ -3,6 +3,7 @@ module Sorceror::MessageProcessor::Operation
     if model = Sorceror::Model.models[message.type]
 
       events = {}
+      instances = {}
 
       message.operations.each do |operation|
         operation_proc  = model.operations[operation.name][:proc]
@@ -29,21 +30,24 @@ module Sorceror::MessageProcessor::Operation
           raise "[#{message.type}][#{operation.name}][#{operation.id}] unable to find instance. Something is wrong!"
         end
 
+        instances[instance.id] = instance
+
         args = [instance, operation.attributes][0...operation_proc.arity]
 
         context = Context.new(operation_proc, args)
         context.execute
 
         unless context.skipped
-          events[instance] ||= []
-          events[instance] << operation_event
+          events[instance.id] ||= []
+          events[instance.id] << operation_event
         end
 
         # Upsert here as its possible that the the insert in Model#create interleaves this stage of the operation
         instance.collection.find(instance.atomic_selector).update(instance.as_document, [ :upsert ])
       end
 
-      events.each do |instance, event_names|
+      events.each do |id, event_names|
+        instance = instances[id]
         message = Sorceror::Message::Event.new(:partition_key => instance.partition_key,
                                                :payload       => {
           :id          => instance.id,

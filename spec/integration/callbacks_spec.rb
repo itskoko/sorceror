@@ -31,12 +31,15 @@ RSpec.describe Sorceror, 'callbacks' do
     end
   end
 
-  before { use_backend(:inline) }
+  before { use_backend(:fake) }
 
-  it 'runs both callbacks in order and can update fields on the model' do
+  it 'runs callbacks in order and publishes the final state of the instance' do
     CallbackModel.create
 
-    expect(CallbackModel.first.field_1).to eq([1])
-    expect(CallbackModel.first.field_2).to eq([2,1])
+    process_operations!
+
+    payload_attributes = Sorceror::Backend.driver.events.first.attributes
+    expect(payload_attributes["field_1"]).to eq([1])
+    expect(payload_attributes["field_2"]).to eq([2,1])
   end
 end
