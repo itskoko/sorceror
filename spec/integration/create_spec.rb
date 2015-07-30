@@ -128,17 +128,20 @@ RSpec.describe Sorceror, 'create' do
     end
   end
 
-  context 'when the underlying model changes while processing an event' do
+  describe 'observers' do
     let(:id) { BSON::ObjectId.new }
 
-    it 'does not use the pass the latest state of the model to the observer' do
-      CreateModel.new(id: id, field_1: 'field_1').create
+    context 'when the underlying model changes while processing an event' do
+      it 'does not use pass the latest state of the model to the observer' do
+        CreateModel.new(id: id, field_1: 'field_1').create
 
-      process_operations!
-      CreateModel.collection.find(_id: id).update('$set' => { field_1: 'field_1_updated' })
-      process_events!
+        process_operations!
+        CreateModel.collection.find(_id: id).update('$set' => { field_1: 'field_1_updated' })
+        process_events!
 
-      expect($observer_model.field_1).to eq('field_1')
+        expect($observer_model.id).to      eq(id)
+        expect($observer_model.field_1).to eq('field_1')
+      end
     end
   end
 end
