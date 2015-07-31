@@ -40,4 +40,8 @@ class Sorceror::Backend::Inline
 
   def stop_subscriber
   end
+
+  def operations
+    @fake.operations
+  end
 end

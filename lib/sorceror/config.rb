@@ -1,7 +1,7 @@
 module Sorceror::Config
   mattr_accessor :app, :backend, :kafka_backend, :kafka_hosts, :zookeeper_hosts,
                  :logger, :subscriber_threads, :operation_topic, :event_topic,
-                 :error_notifier, :retry, :trail, :subscriber_options, :publisher_options,
+                 :error_notifier, :retry, :max_retries, :trail, :subscriber_options, :publisher_options,
                  :middleware_chain
 
   def self.backend=(value)
@@ -51,6 +51,7 @@ module Sorceror::Config
     self.trail                ||= false
     self.subscriber_options   ||= {}
     self.publisher_options    ||= {}
+    self.max_retries          ||= 20
   end
 
   def self.configure(&block)

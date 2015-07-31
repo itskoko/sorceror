@@ -24,8 +24,12 @@ RSpec.describe Sorceror::Middleware, 'Retrying' do
   end
 
   let(:retry_on_error) { false }
+  let(:max_retries)    { 100 }
 
-  before { use_backend(:inline) { |config| config.retry = retry_on_error } }
+  before { use_backend(:inline) { |config|
+    config.retry = retry_on_error
+    config.max_retries = max_retries
+  } }
 
   let(:fire) do
     instance = BasicModel.create(field_1: 'field_1')
@@ -60,6 +64,18 @@ RSpec.describe Sorceror::Middleware, 'Retrying' do
 
         eventually do
           expect($operation_completions).to eq(1)
+        end
+      end
+
+      context 'when retrying more then the maximum amount' do
+        let(:max_retries) { 0 }
+
+        it "doesn't commit the message by raising" do
+          expect { fire }.to raise_error(RuntimeError)
+
+          expect($operation_fired_count).to eq(1)
+          expect($operation_completions).to eq(0)
+          expect(Sorceror::Backend.driver.operations.count).to eq(1)
         end
       end
     end
