@@ -67,11 +67,7 @@ module Sorceror::Model
     begin
       self.send(:insert_as_root)
     rescue => e
-      if e.message =~ /E11000/
-        Sorceror.warn "[#{self.class}][#{self.id}] ignoring already created instance"
-      else
-        raise e
-      end
+      Sorceror.warn "[#{self.class}][#{self.id}] ignoring #{e.message}\n#{e.backtrace.join("\n")}"
     end
 
     self

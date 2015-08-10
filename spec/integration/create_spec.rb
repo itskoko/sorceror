@@ -55,21 +55,21 @@ RSpec.describe Sorceror, 'create' do
   context 'when persistence fails' do
     before { allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_raise("DB DOWN!!!") }
 
-    it 'the operation fails' do
-      expect { CreateModel.new(id: BSON::ObjectId.new, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
+    it 'the operation does not fails' do
+      expect { CreateModel.new(id: BSON::ObjectId.new, field_1: 'field_1', field_2: 1).create }.to_not raise_error
     end
 
     context 'and the operation is posted again' do
       it 'succeeds but the initial operation is processed' do
         id = BSON::ObjectId.new
 
-        expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
+        CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create
 
         allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_call_original
 
         process!
 
-        expect { CreateModel.new(id: id, field_1: 'another_field_1', field_2: 1).create }.to_not raise_error
+        CreateModel.new(id: id, field_1: 'another_field_1', field_2: 1).create
 
         process!
 
