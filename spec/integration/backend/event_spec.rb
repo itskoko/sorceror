@@ -33,19 +33,27 @@ RSpec.describe Sorceror::Backend, 'Event' do
     end
   end
 
-  before { use_backend(:real) { |config| config.retry = retry_on_error } }
-  before { run_subscriber_worker! }
+  before do
+    use_backend(:real) { |config|
+      config.retry = retry_on_error
+      config.max_retries = max_retries
+    }
+    run_subscriber_worker!
+  end
 
   describe 'observer to an event' do
     let(:retry_on_error) { false }
+    let(:max_retries)    { 100 }
     let(:id)             { BSON::ObjectId.new }
 
-    before do
+    let(:fire) do
       BasicModel.new(id: id).create
       BasicModel.new(id: id).fire
     end
 
     context 'when the observer runs successfully' do
+      before { fire }
+
       it 'runs the observer' do
         eventually do
           expect($observer_starts).to eq(1)
@@ -55,36 +63,51 @@ RSpec.describe Sorceror::Backend, 'Event' do
           expect($observer_fired).to eq(1)
         end
       end
+    end
+
+    context 'when the subscriber is restarted' do
+      before do
+        fire
+        wait_for { expect($observer_starts).to eq(1) }
+        Sorceror::Backend.stop_subscriber
+        Sorceror::Backend.start_subscriber(:all)
+      end
+
+      it 'does not reprocess the message' do
+        sleep 1
+
+        expect($observer_starts).to eq(1)
+      end
+    end
+
+    context 'when the observer raises' do
+      before { $observer_raises = true }
 
       context 'when the subscriber is restarted' do
         before do
+          fire
           wait_for { expect($observer_starts).to eq(1) }
           Sorceror::Backend.stop_subscriber
           Sorceror::Backend.start_subscriber(:all)
         end
 
-        it 'does not reprocess the message' do
+        it 'reprocesses the message' do
           sleep 1
 
-          expect($observer_starts).to eq(1)
+          expect($observer_starts).to eq(2)
         end
       end
 
-      context 'when the observer raises' do
-        before { $observer_raises = true }
+      context 'when the max number of retries is exceeded' do
+        let(:max_retries) { 0 }
 
-        context 'when the subscriber is restarted' do
-          before do
-            wait_for { expect($observer_starts).to eq(1) }
-            Sorceror::Backend.stop_subscriber
-            Sorceror::Backend.start_subscriber(:all)
-          end
+        before do
+          fire
+          wait_for { expect($observer_starts).to eq(1) }
+        end
 
-          it 'reprocesses the message' do
-            sleep 1
-
-            expect($observer_starts).to eq(2)
-          end
+        it 'stops all subscribers' do
+          eventually { expect(Sorceror::Backend.subscriber_stopped?).to eq(true) }
         end
       end
     end

@@ -24,9 +24,8 @@ module BackendHelper
   end
 
   def run_subscriber_worker!
-    advance_offsets_forward! if Sorceror::Backend.driver.is_real?
-
     Sorceror::Backend.stop_subscriber
+    advance_offsets_forward! if Sorceror::Backend.driver.is_real?
     Sorceror::Backend.start_subscriber(:all)
   end
 

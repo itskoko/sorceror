@@ -45,14 +45,14 @@ class Sorceror::Backend::JrubyKafka
 
     if consumer.in?([:all, :operation])
       Sorceror::Config.operation_topic.tap do |topic|
-        @distributors << Distributor::Operation.new(topic: topic, threads: @threads)
+        @distributors << Distributor::Operation.new(self, topic: topic, threads: @threads)
         Sorceror.info "[distributor:operation] Starting #{@threads} topic:#{topic}"
       end
     end
 
     if consumer.in?([:all, :event])
       Sorceror::Observer.observer_groups.each do |group, options|
-        @distributors << Distributor::Event.new(topic: Sorceror::Config.event_topic, group: group, threads: @threads, options: options)
+        @distributors << Distributor::Event.new(self, topic: Sorceror::Config.event_topic, group: group, threads: @threads, options: options)
         Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
     end
@@ -84,7 +84,8 @@ class Sorceror::Backend::JrubyKafka
   end
 
   class Distributor
-    def initialize(options)
+    def initialize(supervisor, options)
+      @supervisor = supervisor
       @threads = options.fetch(:threads)
       subscribe(options)
       run
@@ -116,7 +117,8 @@ class Sorceror::Backend::JrubyKafka
           process(message, metadata)
           commit(metadata)
         rescue StandardError => e
-          Sorceror.warn "[kafka] [distributor] [skipped] partition: #{message.partition}, offset: #{message.offset}, payload: #{message.message.to_s}"
+          Sorceror.warn "[kafka] [distributor] died: #{e.message}\n#{e.backtrace.join("\n")}"
+          @supervisor.stop_subscriber
           Sorceror::Config.error_notifier.call(e)
         end
       end

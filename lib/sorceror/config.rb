@@ -51,7 +51,7 @@ module Sorceror::Config
     self.trail                ||= false
     self.subscriber_options   ||= {}
     self.publisher_options    ||= {}
-    self.max_retries          ||= 20
+    self.max_retries          ||= 5
   end
 
   def self.configure(&block)

@@ -7,6 +7,7 @@ class Sorceror::Backend::Poseidon
   def initialize
     # The poseidon socket doesn't like when multiple threads access to it apparently
     @connection_lock = Mutex.new
+    @shutdown_lock   = Mutex.new
   end
 
   def is_real?
@@ -60,26 +61,30 @@ class Sorceror::Backend::Poseidon
 
     if consumer.in?([:all, :operation])
       Sorceror::Config.operation_topic.tap do |topic|
-        @distributor_threads += num_threads.times.map { DistributorThread::Operation.new(topic: topic) }
+        @distributor_threads += num_threads.times.map { DistributorThread::Operation.new(self, topic: topic) }
         Sorceror.info "[distributor:operation] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{topic}"
       end
     end
 
     if consumer.in?([:all, :event])
       Sorceror::Observer.observer_groups.each do |group, options|
-        @distributor_threads += num_threads.times.map { DistributorThread::Event.new(topic: Sorceror::Config.event_topic, group: group, options: options) }
+        @distributor_threads += num_threads.times.map { DistributorThread::Event.new(self, topic: Sorceror::Config.event_topic, group: group, options: options) }
         Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
     end
   end
 
   def stop_subscriber
-    return unless @distributor_threads
+    @shutdown_lock.synchronize do
+      return unless @distributor_threads
 
-    Sorceror.info "[distributor] Stopping #{@distributor_threads.count} threads"
+      Sorceror.info "[distributor] Stopping #{@distributor_threads.count} threads"
 
-    @distributor_threads.each { |distributor_thread| distributor_thread.stop }
-    @distributor_threads = nil
+      @distributor_threads.each(&:stop)
+      sleep 0.1 until @distributor_threads.all?(&:stopped)
+
+      @distributor_threads = nil
+    end
   end
 
   def subscriber_stopped?
@@ -111,9 +116,15 @@ class Sorceror::Backend::Poseidon
   end
 
   class DistributorThread
-    def initialize(options)
+    attr_reader :stopped
+    attr_reader :thread
+
+    def initialize(supervisor, options)
       @stop = false
-      @thread = Thread.new(options) {|opt| main_loop(opt) }
+      @supervisor = supervisor
+      @thread = Thread.new(options) do |opt|
+        main_loop(opt)
+      end
     end
 
     def subscribe(options)
@@ -145,7 +156,7 @@ class Sorceror::Backend::Poseidon
         begin
           fetch_and_process_messages
         rescue Poseidon::Connection::ConnectionFailedError
-          Sorceror.info "[kafka] Reconnecting... [#{@consumer.id}]"
+          Sorceror.info "[kafka] Reconnecting... [#{id}]"
           subscribe(options)
         end
         sleep 0.1
@@ -153,18 +164,16 @@ class Sorceror::Backend::Poseidon
     rescue StandardError => e
       Sorceror.warn "[kafka] [distributor] died: #{e.message}\n#{e.backtrace.join("\n")}"
       Sorceror::Config.error_notifier.call(e)
+      Thread.new { @supervisor.stop_subscriber }
     ensure
       disconnect
+      @stopped = true
+      Sorceror.info "[distributor] stopped [#{id}]"
     end
 
     def stop
-      id = @consumer.try(:id) || 'NA'
       Sorceror.info "[distributor] stopping status:#{@thread.status} [#{id}]"
-
       @stop = true
-      @thread.join
-
-      Sorceror.info "[distributor] stopped [#{id}]"
     end
 
     def show_stop_status(num_requests)
@@ -181,6 +190,10 @@ class Sorceror::Backend::Poseidon
       else
         STDERR.puts "Just a second..."
       end
+    end
+
+    def id
+      @consumer.try(:id) || 'NA'
     end
 
     class MetaData
