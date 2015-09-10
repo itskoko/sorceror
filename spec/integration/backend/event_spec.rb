@@ -80,6 +80,60 @@ RSpec.describe Sorceror::Backend, 'Event' do
       end
     end
 
+    context 'with existing events' do
+      before { fire }
+
+      context 'with an observer that is not trailing' do
+        before do
+          $not_trailing_fired = 0
+          define_constant :NotTrailingObserver do
+            include Sorceror::Observer
+
+            group :not_trailing, trail: false
+
+            observer :fired, BasicModel => :fired do |model|
+              $not_trailing_fired += 1
+            end
+          end
+
+          sleep 1
+
+          Sorceror::Backend.stop_subscriber
+          Sorceror::Backend.start_subscriber(:all)
+        end
+
+        it 'processes any existing events' do
+          eventually { expect($not_trailing_fired).to eq(1) }
+        end
+      end
+
+      context 'with an observer that is trailing' do
+        before do
+          $trailing_fired = 0
+          define_constant :TrailingObserver do
+            include Sorceror::Observer
+
+            group :trailing, trail: true
+
+            observer :fired, BasicModel => :fired do |model|
+              $trailing_fired += 1
+            end
+          end
+
+          sleep 1
+
+          Sorceror::Backend.stop_subscriber
+          Sorceror::Backend.start_subscriber(:all)
+        end
+
+        it 'does not process any existing events' do
+          sleep 1
+
+          expect($trailing_fired).to eq(0)
+        end
+      end
+    end
+
     context 'when the observer raises' do
       before { $observer_raises = true }
 

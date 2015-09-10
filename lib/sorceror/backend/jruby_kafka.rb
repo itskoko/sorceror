@@ -52,7 +52,7 @@ class Sorceror::Backend::JrubyKafka
 
     if consumer.in?([:all, :event])
       Sorceror::Observer.observer_groups.each do |group, options|
-        @distributors << Distributor::Event.new(self, topic: Sorceror::Config.event_topic, group: group, threads: @threads, options: options)
+        @distributors << Distributor::Event.new(self, options.merge(topic: Sorceror::Config.event_topic, group: group, threads: @threads))
         Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
     end

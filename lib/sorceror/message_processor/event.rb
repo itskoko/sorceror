@@ -4,7 +4,13 @@ module Sorceror::MessageProcessor::Event
       instance = model.where(id: message.id).first
 
       unless instance
-        raise "[#{message.type}][#{message.id}] unable to find instance. Something is wrong!"
+        error_message = "[#{message.type}][#{message.id}] unable to find instance. Something is wrong!"
+        if Sorceror::Config.skip_missing_instances
+          Sorceror.warn error_message
+          return
+        else
+          raise error_message
+        end
       end
 
       message.events.each do |event|

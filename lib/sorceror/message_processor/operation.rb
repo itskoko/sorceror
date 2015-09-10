@@ -27,7 +27,12 @@ module Sorceror::MessageProcessor::Operation
         end
 
         unless instance
-          raise "[#{message.type}][#{operation.name}][#{operation.id}] unable to find instance. Something is wrong!"
+          message = "[#{message.type}][#{message.id}] unable to find instance. Something is wrong!"
+          if Sorceror::Config.skip_missing_instances
+            Sorceror.warn message
+          else
+            raise message
+          end
         end
 
         instances[instance.id] = instance
