@@ -92,7 +92,7 @@ module Sorceror::Model
     end
 
     attributes = attributes.call if attributes.is_a? Proc
-    @payloads << payload(name, attributes)
+    @payloads << payload(name, attributes) # Check to make sure that each operation is on the same instance
 
     unless @running_callbacks
       message = Sorceror::Message::Operation.new(:partition_key => partition_key,

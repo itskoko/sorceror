@@ -72,4 +72,18 @@ class Sorceror::Message
       parsed_payload['attributes']
     end
   end
+
+  def Snapshot
+    def topic
+      Sorceror::Config.event_topic
+    end
+
+    def id
+      parsed_payload['id']
+    end
+
+    def attributes
+      parsed_payload['attributes']
+    end
+  end
 end

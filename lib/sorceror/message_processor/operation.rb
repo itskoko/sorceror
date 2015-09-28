@@ -5,9 +5,31 @@ module Sorceror::MessageProcessor::Operation
       events = {}
       instances = {}
 
+      # Only allow one instance per message (but with multiple events)
+
+      # ALGO
+      #
+      # PERSISTENT:
+      # - For each operation
+      #   - Find or instantiate instance
+      #   - UNLESS queued events
+      #   - Queue publishing event: [model+event+seq] id, event attributes
+      #   - Execute operation (don't save)
+      # - Save instance (including queued events to be published)
+      # - OPTIONAL: Publish snapshot: [model+id] id, instance attributes, seq
+      # - Mark instance as snapshot processed
+      # - For each queued event:
+      #   - Publish event
+      #   - Update instance remove published event
+      #
+      # EPHERMAL:
+      # - For each operation
+      #   - For each queued event:
+      #     - Publish event
+
       message.operations.each do |operation|
         operation_proc  = model.operations[operation.name][:proc]
-        operation_event = model.operations[operation.name][:event]
+        event_name      = model.operations[operation.name][:event]
 
         unless operation_proc
           raise "Operation #{operation.name} not defined for #{message.type}" # TODO Use Error class
@@ -44,7 +66,7 @@ module Sorceror::MessageProcessor::Operation
 
         unless context.skipped
           events[instance.id] ||= []
-          events[instance.id] << operation_event
+          events[instance.id] << event_name
         end
 
         # Upsert here as its possible that the the insert in Model#create interleaves this stage of the operation
@@ -53,10 +75,29 @@ module Sorceror::MessageProcessor::Operation
 
       events.each do |id, event_names|
         instance = instances[id]
-        message = Sorceror::Message::Event.new(:partition_key => instance.partition_key,
+        message = Sorceror::Message::Event.new(:partition_key => [instance.partition_key, event_names].join(':'),
                                                :payload       => {
           :id          => instance.id,
           :events      => event_names,
+          :attributes  => instance.as_json,
+          :type        => instance.class.to_s,
+        })
+
+        # XXX Not idempotent (multiple instances so multiple publishes, so if
+        # a publish fails and there are subsequent publishes, the publish will
+        # be repeated. This MAY NOT BE A PROBLEM.
+        Sorceror::Backend.publish(message)
+
+        # TODO Use a offset/version number (perhaps stored on doc). Use to
+        # ignore already processed messages and protect against another
+        # processing during a rebalance.
+        instance.collection.find(instance.atomic_selector).update('$set' => { :__op__ => event_names })
+      end
+
+      instances.each do |instance|
+        message = Sorceror::Message::Snapshot.new(:partition_key => instance.id,
+                                                  :payload       => {
+          :id          => instance.id,
           :attributes  => instance.as_json,
           :type        => instance.class.to_s,
         })
