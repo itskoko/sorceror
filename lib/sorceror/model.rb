@@ -11,6 +11,8 @@ module Sorceror::Model
       end
     end
 
+    field :__c__
+
     define_model_callbacks :operation, only: [:before]
 
     mattr_accessor :_partition_with
@@ -59,6 +61,14 @@ module Sorceror::Model
     end
   end
 
+  def persist
+    self.collection.find(self.atomic_selector).update(self.as_document, [ :upsert ])
+  end
+
+  def context
+    @context ||= Context.new(self)
+  end
+
   def create
     return false unless valid?
 
@@ -76,7 +86,6 @@ module Sorceror::Model
   def payload(name, attributes)
     {
       name: name,
-      id: self.id,
       attributes: attributes
     }
   end
@@ -92,28 +101,91 @@ module Sorceror::Model
     end
 
     attributes = attributes.call if attributes.is_a? Proc
-    @payloads << payload(name, attributes) # Check to make sure that each operation is on the same instance
+    @payloads << payload(name, attributes)
 
     unless @running_callbacks
-      message = Sorceror::Message::Operation.new(:partition_key => partition_key,
-                                                 :payload       => {
-        :operations  => @payloads[-1..-1] + @payloads[0..-2],
-        :type        => self.class.to_s,
+      message = Sorceror::Message::OperationBatch.new(:partition_key => partition_key,
+                                                      :payload       => {
+        :id          => self.id,
+        :operations  => @payloads,
+        :type        => self.class.to_s
       })
 
-      Sorceror::Backend.publish(message)
+      if context = Thread.current[:sorceror_context]
+        context.queue(message)
+      else
+        Sorceror::Backend.publish(message)
+      end
     end
   end
 
   def partition_key
-    if self._partition_with == :self
-      "#{model_name.plural}/#{self.id}"
-    else
-      # TODO If the partition field is nil reload. This is expensive as it loads
-      # the entire object. Consider:
-      #   1) Only loading the required fields
-      #   2) Caching the key on the object (PREFERRED)
-      (self.send(_partition_with) || self.reload.send(_partition_with)).partition_key
+    "#{model_name.plural}/#{self.id}"
+  end
+
+  class Context
+    attr_accessor :current_hash
+
+    attr_reader :attrs
+    attr_reader :instance
+
+    def initialize(instance)
+      @instance = instance
+      @attrs = @instance.__c__ || { operation: { events: [] }, event: {} }.with_indifferent_access
+      @instance.__c__ = @attrs
+    end
+
+    def persist(last: false)
+      @attrs.merge!(last_hash: current_hash) if last
+      @instance.collection.find(@instance.atomic_selector).update('$set' => { :__c__ => @attrs })
+    end
+
+    def operation
+      Operation.new(self)
+    end
+
+    def last_hash
+      @attrs[:last_hash]
+    end
+
+    class Operation
+      def initialize(context)
+        @context = context
+      end
+
+      def events
+        @context.attrs[:operation][:events]
+      end
+
+      def pending?
+        !events.empty?
+      end
+
+      def publish!
+        publish_events!
+      end
+
+      def publish_events!
+        until events.empty? do
+          event = events.shift
+          message = Sorceror::Message::Event.new(:partition_key => [@context.instance.partition_key, event].join(':'),
+                                                 :payload       => {
+            :id    => @context.instance.id,
+            :type  => @context.instance.class.to_s,
+            :name  => event
+          })
+
+          Sorceror::Backend.publish(message)
+
+          @context.persist(last: events.empty?)
+        end
+      end
+
+      def publish_snapshot!
+      end
+
+      def publish_operations!
+      end
     end
   end
 end

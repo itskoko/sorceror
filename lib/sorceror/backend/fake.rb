@@ -23,7 +23,7 @@ class Sorceror::Backend::Fake
   end
 
   def publish(message)
-    @operations << message if message.is_a? Sorceror::Message::Operation
+    @operations << message if message.is_a? Sorceror::Message::OperationBatch
     @events << message     if message.is_a? Sorceror::Message::Event
   end
 
@@ -57,7 +57,7 @@ class Sorceror::Backend::Fake
     marshalled_message = message.class.new(payload: message.to_s,
                                            partition_key: message.partition_key)
 
-    if message.class == Sorceror::Message::Operation
+    if message.class == Sorceror::Message::OperationBatch
       Sorceror::MessageProcessor.process(marshalled_message)
     elsif message.class == Sorceror::Message::Event
       Sorceror::Observer.observer_groups.keys.each do |group|

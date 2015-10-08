@@ -2,28 +2,12 @@ require 'spec_helper'
 
 RSpec.describe Sorceror, 'create' do
   before do
-    $observer_model = nil
-    $observer_fired_count = 0
-  end
-
-  before do
     define_constant :CreateModel do
       include Mongoid::Document
       include Sorceror::Model
 
       field :field_1, type: String
       field :field_2, type: Integer
-    end
-
-    define_constant :CreateObserver do
-      include Sorceror::Observer
-
-      group :consistency
-
-      observer :created, CreateModel => :created do |model|
-        $observer_model = model
-        $observer_fired_count += 1
-      end
     end
   end
 
@@ -38,11 +22,11 @@ RSpec.describe Sorceror, 'create' do
     end
 
     it "processes the first operation" do
-      process!
+      process_operations!
 
-      expect($observer_fired_count).to        eq(1)
-      expect(CreateModel.count).to            eq(1)
-      expect(CreateModel.find(id).field_1).to eq('field_1')
+      expect(Sorceror::Backend.driver.events.count).to  eq(1)
+      expect(CreateModel.count).to                      eq(1)
+      expect(CreateModel.find(id).field_1).to           eq('field_1')
     end
   end
 
@@ -55,7 +39,7 @@ RSpec.describe Sorceror, 'create' do
   context 'when persistence fails' do
     before { allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_raise("DB DOWN!!!") }
 
-    it 'the operation does not fails' do
+    it 'the operation does not fail' do
       expect { CreateModel.new(id: BSON::ObjectId.new, field_1: 'field_1', field_2: 1).create }.to_not raise_error
     end
 
@@ -67,15 +51,15 @@ RSpec.describe Sorceror, 'create' do
 
         allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_call_original
 
-        process!
+        process_operations!
 
         CreateModel.new(id: id, field_1: 'another_field_1', field_2: 1).create
 
-        process!
+        process_operations!
 
-        expect($observer_fired_count).to        eq(1)
-        expect(CreateModel.count).to            eq(1)
-        expect(CreateModel.find(id).field_1).to eq('field_1')
+        expect(Sorceror::Backend.driver.events.count).to eq(1)
+        expect(CreateModel.count).to                     eq(1)
+        expect(CreateModel.find(id).field_1).to          eq('field_1')
       end
     end
   end
@@ -87,10 +71,10 @@ RSpec.describe Sorceror, 'create' do
       id = BSON::ObjectId.new
       expect { CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create }.to raise_error(RuntimeError)
 
-      process!
+      process_operations!
 
-      expect($observer_fired_count).to           eq(0)
-      expect(CreateModel.where(id: id).count).to eq(0)
+      expect(Sorceror::Backend.driver.events.count).to eq(0)
+      expect(CreateModel.where(id: id).count).to       eq(0)
     end
 
     context 'and the operation is posted again with different attributes but publishing succeeds' do
@@ -102,10 +86,10 @@ RSpec.describe Sorceror, 'create' do
 
         CreateModel.new(id: id, field_1: 'another_field_1', field_2: 1).create
 
-        process!
+        process_operations!
 
-        expect($observer_fired_count).to        eq(1)
-        expect(CreateModel.find(id).field_1).to eq('another_field_1')
+        expect(Sorceror::Backend.driver.events.count).to eq(1)
+        expect(CreateModel.find(id).field_1).to          eq('another_field_1')
       end
     end
   end
@@ -118,30 +102,13 @@ RSpec.describe Sorceror, 'create' do
 
       allow(Sorceror::Backend).to receive(:publish).and_raise("Backend down!!!")
 
-      expect { process! }.to raise_error(RuntimeError)
+      expect { process_operations! }.to raise_error(RuntimeError)
 
       allow(Sorceror::Backend).to receive(:publish).and_call_original
 
-      process!
+      process_operations!
 
-      expect($observer_fired_count).to eq(1)
-    end
-  end
-
-  describe 'observers' do
-    let(:id) { BSON::ObjectId.new }
-
-    context 'when the underlying model changes while processing an event' do
-      it 'does not use pass the latest state of the model to the observer' do
-        CreateModel.new(id: id, field_1: 'field_1').create
-
-        process_operations!
-        CreateModel.collection.find(_id: id).update('$set' => { field_1: 'field_1_updated' })
-        process_events!
-
-        expect($observer_model.id).to      eq(id)
-        expect($observer_model.field_1).to eq('field_1')
-      end
+      expect(Sorceror::Backend.driver.events.count).to eq(1)
     end
   end
 end

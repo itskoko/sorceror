@@ -23,26 +23,43 @@ class Sorceror::Message
     parsed_payload['type']
   end
 
+  def hash
+    raise NotImplementedError
+  end
+
   def topic
     raise NotImplementedError
   end
 
-  class Operation < self
+  class OperationBatch < self
     def topic
       Sorceror::Config.operation_topic
     end
 
-    def operations
-      parsed_payload['operations'].map { |op| Payload.new(op) }
+    def id
+      parsed_payload['id']
     end
 
-    class Payload
-      def initialize(payload)
-        @payload = payload
-      end
+    def attributes
+      parsed_payload['attributes']
+    end
 
-      def id
-        @payload['id']
+    def operations
+      parsed_payload['operations'].map { |op| Operation.new(self, op) }
+    end
+
+    def model
+      Sorceror::Model.models[self.type]
+    end
+
+    def hash
+      operations.collect(&:hash).hash
+    end
+
+    class Operation
+      def initialize(batch, payload)
+        @batch = batch
+        @payload = payload
       end
 
       def name
@@ -51,6 +68,26 @@ class Sorceror::Message
 
       def attributes
         @payload['attributes']
+      end
+
+      def create?
+        self.name == :create
+      end
+
+      def proc
+        @batch.model.operations[self.name][:proc]
+      end
+
+      def event
+        @batch.model.operations[self.name][:event]
+      end
+
+      def hash
+        if name == :create
+          attributes['id']
+        else
+          @payload.hash
+        end
       end
     end
   end
