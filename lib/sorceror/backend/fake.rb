@@ -1,11 +1,14 @@
 class Sorceror::Backend::Fake
   cattr_accessor :filter
+
   attr_reader :operations
   attr_reader :events
+  attr_reader :snapshots
 
   def initialize
     @operations = []
     @events = []
+    @snapshots = []
   end
 
   def is_real?
@@ -25,6 +28,7 @@ class Sorceror::Backend::Fake
   def publish(message)
     @operations << message if message.is_a? Sorceror::Message::OperationBatch
     @events << message     if message.is_a? Sorceror::Message::Event
+     @snapshots << message if message.is_a? Sorceror::Message::Snapshot
   end
 
   def start_subscriber(consumer)

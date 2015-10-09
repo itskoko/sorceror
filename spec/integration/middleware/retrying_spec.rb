@@ -40,7 +40,7 @@ RSpec.describe Sorceror::Middleware, 'Retrying' do
     before { $operation_raises = true }
 
     context 'without retrying' do
-      it "doesn't run the observer" do
+      it "doesn't run" do
         expect { fire }.to raise_error(RuntimeError)
 
         expect($operation_fired_count).to eq(1)

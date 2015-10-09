@@ -101,16 +101,16 @@ class Sorceror::Message
       parsed_payload['id']
     end
 
-    def events
-      parsed_payload['events']
-    end
-
     def attributes
       parsed_payload['attributes']
     end
+
+    def name
+      parsed_payload['name']
+    end
   end
 
-  def Snapshot
+  class Snapshot < self
     def topic
       Sorceror::Config.event_topic
     end

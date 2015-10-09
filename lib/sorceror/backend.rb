@@ -53,8 +53,12 @@ module Sorceror::Backend
     delegate :connected?, :stop_subscriber, :to => :driver
 
     def publish(*args)
-      ensure_connected
-      driver.publish(*args)
+      if context = Thread.current[:sorceror_context]
+        context.queue(*args)
+      else
+        ensure_connected
+        driver.publish(*args)
+      end
     end
 
     def start_subscriber(consumer)

@@ -50,7 +50,7 @@ RSpec.describe Sorceror, 'Middleware Spec' do
       expect($counts).to eq([1, 3, 4, 2])
 
       expect($messages.count).to                                        eq(1)
-      expect($messages.first.class).to                                  eq(Sorceror::Message::Operation)
+      expect($messages.first.class).to                                  eq(Sorceror::Message::OperationBatch)
       expect($messages.first.operations.first.attributes['field_1']).to eq('field_1')
     end
   end

@@ -38,7 +38,7 @@ RSpec.describe Sorceror, 'callbacks' do
 
     process_operations!
 
-    payload_attributes = Sorceror::Backend.driver.events.first.attributes
+    payload_attributes = Sorceror::Backend.driver.snapshots.first.payload[:attributes]
     expect(payload_attributes["field_1"]).to eq([1])
     expect(payload_attributes["field_2"]).to eq([2,1])
   end

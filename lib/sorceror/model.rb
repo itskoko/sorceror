@@ -111,11 +111,7 @@ module Sorceror::Model
         :type        => self.class.to_s
       })
 
-      if context = Thread.current[:sorceror_context]
-        context.queue(message)
-      else
-        Sorceror::Backend.publish(message)
-      end
+      Sorceror::Backend.publish(message)
     end
   end
 
@@ -131,7 +127,7 @@ module Sorceror::Model
 
     def initialize(instance)
       @instance = instance
-      @attrs = @instance.__c__ || { operation: { events: [] }, event: {} }.with_indifferent_access
+      @attrs = @instance.__c__ || { operation: { queued: [], events: [] }, event: {} }
       @instance.__c__ = @attrs
     end
 
@@ -157,12 +153,23 @@ module Sorceror::Model
         @context.attrs[:operation][:events]
       end
 
+      def queue(message)
+        @context.attrs[:operation][:queued] << YAML.dump(message)
+      end
+
+      def queued
+        @context.attrs[:operation][:queued]
+      end
+
       def pending?
         !events.empty?
       end
 
       def publish!
         publish_events!
+        publish_snapshot!
+        publish_operations!
+        @context.persist(last: true)
       end
 
       def publish_events!
@@ -170,21 +177,34 @@ module Sorceror::Model
           event = events.shift
           message = Sorceror::Message::Event.new(:partition_key => [@context.instance.partition_key, event].join(':'),
                                                  :payload       => {
-            :id    => @context.instance.id,
-            :type  => @context.instance.class.to_s,
-            :name  => event
+            :id         => @context.instance.id,
+            :type       => @context.instance.class.to_s,
+            :name       => event[0],
+            :attributes => event[1]
           })
 
           Sorceror::Backend.publish(message)
 
-          @context.persist(last: events.empty?)
+          @context.persist
         end
       end
 
       def publish_snapshot!
+        message = Sorceror::Message::Snapshot.new(:partition_key => @context.instance.partition_key,
+                                                  :payload       => {
+          :id         => @context.instance.id,
+          :type       => @context.instance.class.to_s,
+          :attributes => @context.instance.as_json
+        })
+
+        Sorceror::Backend.publish(message)
       end
 
       def publish_operations!
+        until queued.empty?
+          Sorceror::Backend.publish(YAML.load(queued.shift))
+          @context.persist
+        end
       end
     end
   end
