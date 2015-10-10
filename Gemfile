@@ -5,7 +5,7 @@ gem 'rake'
 gem 'rspec'
 gem 'rspec-retry', :require => false
 
-gem 'mongoid'
+gem 'mongoid', '~> 4.0'
 
 gem 'pry'
 
