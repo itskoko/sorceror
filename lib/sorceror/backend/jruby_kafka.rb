@@ -56,6 +56,13 @@ class Sorceror::Backend::JrubyKafka
         Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
     end
+
+    if consumer.in?([:all, :snapshot])
+      Sorceror::Observer.observer_groups.each do |group, options|
+        @distributors << Distributor::Snapshot.new(self, options.merge(topic: Sorceror::Config.snapshot_topic, group: group, threads: @threads))
+        Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.snapshot_topic} and group:#{group}"
+      end
+    end
   end
 
   def stop_subscriber
@@ -155,7 +162,7 @@ class Sorceror::Backend::JrubyKafka
 
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} partition:#{metadata.partition}"
-        Sorceror::MessageProcessor.process(Sorceror::Message::Operation.new(payload: payload, partition_key: metadata.key))
+        Sorceror::MessageProcessor.process(Sorceror::Message::OperationBatch.new(payload: payload, partition_key: metadata.key))
       end
     end
 
@@ -171,6 +178,21 @@ class Sorceror::Backend::JrubyKafka
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
         Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload, partition_key: metadata.key), @group_name, //)
+      end
+    end
+
+    class Snapshot < self
+      def subscribe(options)
+        @group_name = options.fetch(:group)
+
+        connect(topic: options.fetch(:topic),
+                group: "#{Sorceror::Config.app}.#{@group_name}",
+                trail: options.fetch(:trail, false))
+      end
+
+      def process(payload, metadata)
+        Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
+        Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload, partition_key: metadata.key), @group_name, //)
       end
     end
   end
