@@ -12,20 +12,20 @@ class Sorceror::MessageProcessor::OperationBatch
       @instance = @model.new(@message.operations.first.attributes)
     end
 
-    if @instance.context.last_hash == @message.hash
+    if @instance.context.operation.last_hash == @message.hash
       Sorceror.warn "[#{@message.type}][#{@message.id}] skipping as "
       return
     end
 
-    @instance.context.current_hash = @message.hash
+    @instance.context.operation.current_hash = @message.hash
 
     # raise_or_warn_if_instance_missing
     unless @instance
-      message = "[#{message.type}][#{message.id}] unable to find instance. Something is wrong!"
+      error_message = "[#{message.type}][#{message.id}] unable to find instance. Something is wrong!"
       if Sorceror::Config.skip_missing_instances
-        Sorceror.warn message
+        Sorceror.warn error_message
       else
-        raise message
+        raise error_message
       end
     end
 

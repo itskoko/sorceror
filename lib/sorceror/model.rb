@@ -11,8 +11,6 @@ module Sorceror::Model
       end
     end
 
-    field :__c__
-
     define_model_callbacks :operation, only: [:before]
 
     mattr_accessor :_partition_with
@@ -120,45 +118,52 @@ module Sorceror::Model
   end
 
   class Context
-    attr_accessor :current_hash
-
-    attr_reader :attrs
     attr_reader :instance
 
     def initialize(instance)
       @instance = instance
-      @attrs = @instance.__c__ || { operation: { queued: [], events: [] }, event: {} }
-      @instance.__c__ = @attrs
-    end
-
-    def persist(last: false)
-      @attrs.merge!(last_hash: current_hash) if last
-      @instance.collection.find(@instance.atomic_selector).update('$set' => { :__c__ => @attrs })
     end
 
     def operation
-      Operation.new(self)
+      @operation ||= Operation.new(self)
     end
 
-    def last_hash
-      @attrs[:last_hash]
+    def observer(observer_group)
+      @observers ||= {}
+      @observers[observer_group] ||= Observer.new(observer_group, self)
     end
 
     class Operation
+      attr_reader :attrs
+      attr_accessor :current_hash
+
+      FIELD = :__co__
+
       def initialize(context)
         @context = context
+        @attrs = @context.instance[FIELD] || { operation: { queued: [], events: [] }, event: {} }
+        @context.instance[FIELD] = @attrs
+      end
+
+      def last_hash
+        @attrs[:last_hash]
+      end
+
+      def persist(last: false)
+        @attrs.merge!(last_hash: current_hash) if last
+        @context.instance.collection.find(@context.instance.atomic_selector).update('$set' => { FIELD => @attrs })
       end
 
       def events
-        @context.attrs[:operation][:events]
+        @attrs[:operation][:events]
       end
 
       def queue(message)
-        @context.attrs[:operation][:queued] << YAML.dump(message)
+        @attrs[:operation][:queued] << YAML.dump(message)
       end
 
       def queued
-        @context.attrs[:operation][:queued]
+        @attrs[:operation][:queued]
       end
 
       def pending?
@@ -169,7 +174,7 @@ module Sorceror::Model
         publish_events!
         publish_snapshot!
         publish_operations!
-        @context.persist(last: true)
+        persist(last: true)
       end
 
       def publish_events!
@@ -185,7 +190,7 @@ module Sorceror::Model
 
           Sorceror::Backend.publish(message)
 
-          @context.persist
+          persist
         end
       end
 
@@ -203,8 +208,35 @@ module Sorceror::Model
       def publish_operations!
         until queued.empty?
           Sorceror::Backend.publish(YAML.load(queued.shift))
-          @context.persist
+          persist
         end
+      end
+    end
+
+    class Observer
+      FIELD = :__ce__
+
+      def initialize(observer_group, context)
+        @context = context
+        @observer_group = observer_group
+        @context.instance[FIELD] ||= {}
+        @queued = @context.instance[FIELD][@observer_group] || []
+      end
+
+      def persist
+        @context.instance.collection.find(@context.instance.atomic_selector).update('$set' => { "#{FIELD}.#{@observer_group}" => @queued }) if @queued
+      end
+
+      def queue(observer)
+        @queued << observer
+      end
+
+      def shift_queued
+        @queued.shift
+      end
+
+      def pending?
+        !@queued.empty?
       end
     end
   end

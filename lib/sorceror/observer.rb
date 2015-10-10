@@ -8,23 +8,25 @@ module Sorceror::Observer
     end
 
     def observer(name, options, &block)
-      name = "#{@observer_group}:#{name}"
+      defn = case options
+      when Hash
+        Definition::Event.new(*options.first)
+      else
+        Definition::Snapshot.new(options)
+      end
+      defn.group = @observer_group
+      defn.name = name
+      defn.callback = block
 
       raise "group must be defined" unless @observer_group
-      raise "#{name} observer already defined" if Sorceror::Observer.observers_by_name[name]
+      raise "#{defn} observer already defined" if Sorceror::Observer.observers_by_name[defn.to_s]
 
-      model      = options.first[0]
-      event_name = options.first[1]
+      Sorceror::Observer.observer_groups_by_model[defn.model] ||= {}
+      Sorceror::Observer.observer_groups_by_model[defn.model][@observer_group] ||= []
+      Sorceror::Observer.observer_groups_by_model[defn.model][@observer_group] << defn
 
-      defn = { event: event_name, proc: block }
-
-      Sorceror::Observer.observer_groups_by_model[model] ||= {}
-      Sorceror::Observer.observer_groups_by_model[model][@observer_group] ||= []
-      Sorceror::Observer.observer_groups_by_model[model][@observer_group] << defn.merge(name: name)
-
-      Sorceror::Observer.observers_by_name[name] = defn.merge(model: model)
+      Sorceror::Observer.observers_by_name[defn.to_s] = defn
     end
-
   end
 
   def self.reset!
@@ -40,4 +42,32 @@ module Sorceror::Observer
   end
 
   reset!
+
+  class Definition
+    attr_accessor :callback
+    attr_accessor :name
+    attr_accessor :group
+
+    def to_s
+      "#{@group}:#{@name}"
+    end
+
+    class Event < self
+      attr_accessor :model
+      attr_accessor :event_name
+
+      def initialize(model, event_name)
+        @model = model
+        @event_name = event_name
+      end
+    end
+
+    class Snapshot < self
+      attr_accessor :model
+
+      def initialize(model)
+        @model = model
+      end
+    end
+  end
 end

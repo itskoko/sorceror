@@ -33,6 +33,7 @@ module BackendHelper
   def process!
     process_operations!
     process_events!
+    process_snapshots!
   end
 
   def process_operations!
@@ -41,6 +42,10 @@ module BackendHelper
 
   def process_events!
     Sorceror::Backend.driver.process_events
+  end
+
+  def process_snapshots!
+    Sorceror::Backend.driver.process_snapshots
   end
 end
 

@@ -28,7 +28,7 @@ class Sorceror::Backend::Fake
   def publish(message)
     @operations << message if message.is_a? Sorceror::Message::OperationBatch
     @events << message     if message.is_a? Sorceror::Message::Event
-     @snapshots << message if message.is_a? Sorceror::Message::Snapshot
+    @snapshots << message  if message.is_a? Sorceror::Message::Snapshot
   end
 
   def start_subscriber(consumer)
@@ -37,6 +37,7 @@ class Sorceror::Backend::Fake
   def stop_subscriber
     @operations.clear
     @events.clear
+    @snapshots.clear
   end
 
   def process_operations
@@ -53,7 +54,16 @@ class Sorceror::Backend::Fake
       _publish(message)
     end
   rescue => e
-    @operations.unshift(message) if message
+    @events.unshift(message) if message
+    raise e
+  end
+
+  def process_snapshots
+    while message = @snapshots.shift do
+      _publish(message)
+    end
+  rescue => e
+    @snapshots.unshift(message) if message
     raise e
   end
 
@@ -63,12 +73,10 @@ class Sorceror::Backend::Fake
 
     if message.class == Sorceror::Message::OperationBatch
       Sorceror::MessageProcessor.process(marshalled_message)
-    elsif message.class == Sorceror::Message::Event
+    else
       Sorceror::Observer.observer_groups.keys.each do |group|
         Sorceror::MessageProcessor.process(marshalled_message, group, filter || //)
       end
-    else
-      raise "Unknown message class #{message.class}"
     end
   end
 end

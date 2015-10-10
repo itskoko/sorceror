@@ -1,6 +1,6 @@
 module Sorceror::MessageProcessor
   extend Sorceror::Autoload
-  autoload :OperationBatch, :Event
+  autoload :OperationBatch, :Event, :Snapshot
 
   def self.process(message, *args)
     Sorceror::Middleware.run(message) do

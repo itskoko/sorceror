@@ -106,7 +106,7 @@ class Sorceror::Message
     end
 
     def name
-      parsed_payload['name']
+      parsed_payload['name'].to_sym
     end
   end
 

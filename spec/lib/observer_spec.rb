@@ -20,7 +20,7 @@ RSpec.describe Sorceror, 'create' do
 
       group :consistency
 
-      observer :created, ObserverModel => :created do |model|
+      observer :created, ObserverModel do |model|
         $observer_model = model
         $observer_fired_count += 1
       end
@@ -39,7 +39,7 @@ RSpec.describe Sorceror, 'create' do
 
         process_operations!
         ObserverModel.collection.find(_id: id).update('$set' => { field_1: 'field_1_updated' })
-        process_events!
+        process_snapshots!
 
         expect($observer_model.id).to      eq(id)
         expect($observer_model.field_1).to eq('field_1')

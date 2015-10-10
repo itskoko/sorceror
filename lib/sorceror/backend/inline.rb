@@ -26,8 +26,9 @@ class Sorceror::Backend::Inline
     unless @running
       @fake.filter = filter
       @running = true
-      until @fake.operations.empty? && @fake.events.empty?
+      until @fake.operations.empty? && @fake.events.empty? && @fake.snapshots.empty?
         @fake.process_operations
+        @fake.process_snapshots
         @fake.process_events
       end
       @running = false

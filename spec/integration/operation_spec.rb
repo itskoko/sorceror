@@ -1,11 +1,10 @@
 require 'spec_helper'
 
-RSpec.describe Sorceror do
+RSpec.describe Sorceror::Backend, 'Operation' do
   before do
-    $skip = false
-    $operation_fired_count = 0
-    $operation_raises      = false
-    $operation_proc        = -> {}
+    $operation_starts = 0
+    $operation_completions = 0
+    $operation_raises = false
   end
 
   before do
@@ -16,98 +15,79 @@ RSpec.describe Sorceror do
       field :field_1, type: String
       field :field_2, type: Integer
 
-      operation :fire => :fired do |model, attributes|
-        skip if $skip
-        $operation_fired_count += 1
-        $operation_proc.call
+      operation :update => :updated do |model, attributes|
+        $operation_starts += 1
+        model.assign_attributes(attributes)
+        raise if $operation_raises
+        $operation_completions += 1
       end
     end
   end
 
-  before { use_backend(:fake) }
+  let(:retry_on_error) { false }
 
-  describe 'Operation execution' do
-    let(:instance) { BasicModel.new(field_1: 'field_1') }
-    let(:fire) do
-      instance.create
-      BasicModel.new(id: instance.id).fire
+  before { use_backend(:real) { |config| config.retry = retry_on_error } }
+  before { run_subscriber_worker! }
+
+  describe 'create' do
+    it 'creates the instance' do
+      id = BSON::ObjectId.new
+      BasicModel.new(id: id, field_1: 'field_1', field_2: 1).create
+
+      eventually do
+        instance = BasicModel.first
+        expect(instance.id).to eq(id)
+        expect(instance.field_1).to eq('field_1')
+        expect(instance.field_2).to eq(1)
+      end
+    end
+  end
+
+  describe 'update operation' do
+    let(:id) { BSON::ObjectId.new }
+
+    before do
+      BasicModel.new(id: id, field_1: 'field_1', field_2: 1).create
+      BasicModel.new(id: id).update(field_1: 'field_1_updated', field_2: 2)
     end
 
-    it 'publishes the correct events' do
-      fire
-
-      process_operations!
-
-      expect(Sorceror::Backend.driver.events.count).to eq(2)
-
-      expect(Sorceror::Backend.driver.events[0].id).to         eq(instance.id)
-      expect(Sorceror::Backend.driver.events[0].name).to       eq(:created)
-      expect(Sorceror::Backend.driver.events[0].attributes).to eq({ 'id' => instance.id.to_s, 'field_1' => 'field_1' })
-
-      expect(Sorceror::Backend.driver.events[1].id).to         eq(instance.id)
-      expect(Sorceror::Backend.driver.events[1].name).to       eq(:fired)
-      expect(Sorceror::Backend.driver.events[1].attributes).to eq({})
+    it 'updates the instance' do
+      eventually do
+        instance = BasicModel.first
+        expect(instance.id).to eq(id)
+        expect(instance.field_1).to eq('field_1_updated')
+        expect(instance.field_2).to eq(2)
+      end
     end
 
-    it 'publishes the correct snapshot' do
-      fire
-
-      process_operations!
-
-      expect(Sorceror::Backend.driver.snapshots.count).to eq(2)
-
-      expect(Sorceror::Backend.driver.snapshots[0].id).to         eq(instance.id)
-      expect(Sorceror::Backend.driver.snapshots[0].attributes).to eq({ 'id'      => instance.id,
-                                                                       'field_1' => 'field_1' })
-
-      expect(Sorceror::Backend.driver.snapshots[1].id).to         eq(instance.id)
-      expect(Sorceror::Backend.driver.snapshots[1].attributes).to eq({ 'id'      => instance.id,
-                                                                       'field_1' => 'field_1' })
-    end
-
-    context 'when the operation creates another operation' do
-      let(:another_instance) { BasicModel.new(field_2: 'field_2') }
-
+    context 'when the subscriber is restarted' do
       before do
-        $operation_proc = -> { another_instance.create }
+        wait_for { expect(BasicModel.first.field_1).to eq('field_1_updated') }
+        Sorceror::Backend.stop_subscriber
+        Sorceror::Backend.start_subscriber(:all)
       end
 
-      it 'publishes the other operation after the first operation has been processed' do
-        fire
+      it 'does not reprocess the message' do
+        sleep 1
 
-        expect(Sorceror::Backend.driver.operations.count).to eq(2)
-
-        process_operations!
-
-        expect(BasicModel.find(another_instance.id)).to_not eq(nil)
+        expect($operation_starts).to eq(1)
       end
     end
 
+    context 'when the operation raises' do
+      before { $operation_raises = true }
 
-    describe 'skipping' do
-      context 'when not skipping' do
-        before { $skip = false }
-
-        it "publishes the operation" do
-          fire
-
-          process_operations!
-
-          expect($operation_fired_count).to eq(1)
+      context 'when the subscriber is restarted' do
+        before do
+          wait_for { $operation_starts == 1 }
+          Sorceror::Backend.stop_subscriber
+          Sorceror::Backend.start_subscriber(:all)
         end
-      end
 
-      context 'when skipping' do
-        before { $skip = true }
+        it 'reprocesses the message' do
+          sleep 1
 
-        it "does not publish the operation" do
-          fire
-
-          process_operations!
-
-          expect($operation_fired_count).to                       eq(0)
-          expect(Sorceror::Backend.driver.events.count).to        eq(1)
-          expect(Sorceror::Backend.driver.events.first.name).to   eq(:created)
+          expect($operation_starts).to eq(2)
         end
       end
     end
