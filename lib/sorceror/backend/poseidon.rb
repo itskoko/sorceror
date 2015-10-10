@@ -72,6 +72,13 @@ class Sorceror::Backend::Poseidon
         Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
     end
+
+    if consumer.in?([:all, :snapshot])
+      Sorceror::Observer.observer_groups.each do |group, options|
+        @distributor_threads += num_threads.times.map { DistributorThread::Snapshot.new(self, topic: Sorceror::Config.snapshot_topic, group: group, options: options) }
+        Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.snapshot_topic} and group:#{group}"
+      end
+    end
   end
 
   def stop_subscriber
@@ -235,7 +242,7 @@ class Sorceror::Backend::Poseidon
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} partition:#{metadata.partition} #{@consumer.id}"
 
-        Sorceror::MessageProcessor.process(Sorceror::Message::Operation.new(payload: payload.value, partition_key: payload.key))
+        Sorceror::MessageProcessor.process(Sorceror::Message::OperationBatch.new(payload: payload.value, partition_key: payload.key))
         metadata.ack
       end
     end
@@ -265,6 +272,35 @@ class Sorceror::Backend::Poseidon
         Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
         Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload.value, partition_key: payload.key), @group_name, //)
+        metadata.ack
+      end
+    end
+
+    class Snapshot < self
+      def subscribe(options)
+        raise "No topic specified" unless options[:topic]
+        raise "No group specified" unless options[:group]
+
+        @topic      = options[:topic]
+        @group_name = options[:group]
+        @group      = "#{Sorceror::Config.app}.#{@group_name}"
+
+        trail = options[:options].fetch(:trail, false)
+
+        @consumer = ::Poseidon::ConsumerGroup.new(@group,
+                                                  Sorceror::Config.kafka_hosts,
+                                                  Sorceror::Config.zookeeper_hosts,
+                                                  @topic,
+                                                  :trail => trail,
+                                                  :max_wait_ms => 10)
+
+        Sorceror.info "[distributor] Subscribed to topic:#{@topic} group:#{@group} [#{@consumer.id}]"
+      end
+
+      def process(payload, metadata)
+        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
+
+        Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload.value, partition_key: payload.key), @group_name, //)
         metadata.ack
       end
     end

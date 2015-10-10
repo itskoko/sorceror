@@ -112,7 +112,7 @@ class Sorceror::Message
 
   class Snapshot < self
     def topic
-      Sorceror::Config.event_topic
+      Sorceror::Config.snapshot_topic
     end
 
     def id

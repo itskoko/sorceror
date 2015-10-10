@@ -7,7 +7,7 @@ class KafkaHarness
   ROOT    = Pathname.new(File.expand_path("../../../", __FILE__))
   VERSION = "0.8.1.1"
   SERVER  = ROOT.join "kafka_2.10-#{VERSION}"
-  TOPICS  = ['test.operations', 'test.events']
+  TOPICS  = ['test.operations', 'test.events', 'test.snapshots']
 
   KAFKA_PORT  = 29092
   KAFKA_BIN   = SERVER.join("bin", "kafka-server-start.sh")

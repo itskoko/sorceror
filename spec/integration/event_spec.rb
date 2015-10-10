@@ -25,7 +25,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
 
       group :basic
 
-      observer :fired, BasicModel => :fired do |model|
+      observer :fired, BasicModel => :fired do |attributes|
         $observer_starts += 1
         raise if $observer_raises
         $observer_fired += 1
@@ -103,6 +103,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
         end
 
         it 'processes any existing events' do
+          pending "A safe way to test trailing"
           eventually { expect($not_trailing_fired).to eq(1) }
         end
       end

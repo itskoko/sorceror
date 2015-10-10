@@ -13,7 +13,7 @@ Bundler.require
 
 Dir["./spec/support/**/*.rb"].each {|f| require f}
 
-if ENV['TRAVIS']
+if ENV['CI']
   require 'rspec/retry'
   RSpec.configure do |config|
     config.verbose_retry = true
