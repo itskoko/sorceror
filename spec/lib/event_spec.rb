@@ -6,6 +6,7 @@ RSpec.describe Sorceror do
       $snapshot_observer_model = nil
       $event_observer_starts = 0
       $event_observer_attrs = nil
+      $event_observer_model = nil
     end
 
   before do
@@ -25,9 +26,10 @@ RSpec.describe Sorceror do
 
       group :basic
 
-      observer :basic_model_fired, BasicModel => :fired do |attrs|
+      observer :basic_model_fired, BasicModel => :fired do |model, attrs|
         $event_observer_starts += 1
         $event_observer_attrs = attrs
+        $event_observer_model = model
       end
     end
 
@@ -55,8 +57,10 @@ RSpec.describe Sorceror do
     it 'invokes snapshot and event observers' do
       fire
 
-      expect($event_observer_starts).to eq(1)
-      expect($event_observer_attrs).to  eq('something' => 'changed')
+      expect($event_observer_starts).to        eq(1)
+      expect($event_observer_attrs).to         eq('something' => 'changed')
+      expect($event_observer_model.id).to      eq(instance.id)
+      expect($event_observer_model.field_1).to eq(instance.field_1)
 
       expect($snapshot_observer_starts).to        eq(2)
       expect($snapshot_observer_model.id).to      eq(instance.id)

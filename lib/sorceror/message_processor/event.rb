@@ -43,7 +43,7 @@ class Sorceror::MessageProcessor::Event
 
           # keys = @model.fields.keys + ['id']
           # observer.callback.call(@model.new(@message.attributes.slice(*keys)))
-          observer.callback.call(@message.attributes)
+          observer.callback.call(@instance, @message.attributes)
 
           @instance.context.observer(group).persist
         end

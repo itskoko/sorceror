@@ -25,7 +25,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
 
       group :basic
 
-      observer :fired, BasicModel => :fired do |attributes|
+      observer :fired, BasicModel => :fired do |instance, attributes|
         $observer_starts += 1
         raise if $observer_raises
         $observer_fired += 1
@@ -91,7 +91,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
 
             group :not_trailing, trail: false
 
-            observer :fired, BasicModel => :fired do |model|
+            observer :fired, BasicModel => :fired do |model, attributes|
               $not_trailing_fired += 1
             end
           end
@@ -116,7 +116,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
 
             group :trailing, trail: true
 
-            observer :fired, BasicModel => :fired do |model|
+            observer :fired, BasicModel => :fired do |model, attributes|
               $trailing_fired += 1
             end
           end
