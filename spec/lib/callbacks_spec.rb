@@ -42,4 +42,19 @@ RSpec.describe Sorceror, 'callbacks' do
     expect(payload_attributes["field_1"]).to eq([1])
     expect(payload_attributes["field_2"]).to eq([2,1])
   end
+
+  it 'only creates one snapshot' do
+    CallbackModel.create
+
+    process_operations!
+
+    expect(Sorceror::Backend.driver.snapshots.count).to eq(1)
+  end
+
+  it 'creates events in the correct order' do
+    CallbackModel.create
+
+    expect(Sorceror::Backend.driver.operations.first.operations.first.name).to eq(:create)
+    expect(Sorceror::Backend.driver.operations.last.operations.last.name).to   eq(:operation_1)
+  end
 end

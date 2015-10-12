@@ -1,5 +1,5 @@
 class Sorceror::MessageProcessor::Event
-  def initialize(message, group_name, filter)
+  def initialize(message, group_name, filter=[])
     @message = message
     @group_name = group_name
     @filter = filter
@@ -30,7 +30,7 @@ class Sorceror::MessageProcessor::Event
         unless @instance.context.observer(group).pending?
           observers = model_observers.select { |ob| ob.is_a?(Sorceror::Observer::Definition::Event) &&
                                                ob.event_name == @message.name &&
-                                               ob.event_name =~ @filter }
+                                               (@filter.empty? || ob.group.in?(@filter)) }
           observers.each { |ob| @instance.context.observer(group).queue(ob.to_s) }
           @instance.context.observer(group).persist
         end

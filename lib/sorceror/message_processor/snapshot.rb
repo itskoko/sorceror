@@ -1,5 +1,5 @@
 class Sorceror::MessageProcessor::Snapshot
-  def initialize(message, group_name, filter)
+  def initialize(message, group_name, filter=[])
     @message = message
     @group_name = group_name
     @filter = filter

@@ -271,7 +271,7 @@ class Sorceror::Backend::Poseidon
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
-        Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload.value, partition_key: payload.key), @group_name, //)
+        Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload.value, partition_key: payload.key), @group_name)
         metadata.ack
       end
     end
@@ -300,7 +300,7 @@ class Sorceror::Backend::Poseidon
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
-        Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload.value, partition_key: payload.key), @group_name, //)
+        Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload.value, partition_key: payload.key), @group_name)
         metadata.ack
       end
     end

@@ -75,7 +75,7 @@ class Sorceror::Backend::Fake
       Sorceror::MessageProcessor.process(marshalled_message)
     else
       Sorceror::Observer.observer_groups.keys.each do |group|
-        Sorceror::MessageProcessor.process(marshalled_message, group, filter || //)
+        Sorceror::MessageProcessor.process(marshalled_message, group, filter || [])
       end
     end
   end

@@ -105,7 +105,7 @@ module Sorceror::Model
       message = Sorceror::Message::OperationBatch.new(:partition_key => partition_key,
                                                       :payload       => {
         :id          => self.id,
-        :operations  => @payloads,
+        :operations  => @payloads.reverse,
         :type        => self.class.to_s
       })
 
