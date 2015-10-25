@@ -13,7 +13,6 @@ module Sorceror::Model
 
     define_model_callbacks :operation, only: [:before]
 
-    mattr_accessor :_partition_with
     mattr_accessor :operations
     self.operations = { create: { proc: -> _ {}, event: :created  } }
 
@@ -27,8 +26,6 @@ module Sorceror::Model
     Sorceror::Model.models[self.model_name.name] = self
 
     include Sorceror::Serializer
-
-    partition_with :self
   end
 
   class << self
@@ -39,12 +36,6 @@ module Sorceror::Model
   module ClassMethods
     def create(attributes={})
       self.new(attributes).tap(&:create)
-    end
-
-    def partition_with(partition_with)
-      raise ArgumentError.new("#{partition_with} is not a relation on #{self}") unless (relations.keys << 'self').include?(partition_with.to_s)
-
-      self._partition_with = partition_with
     end
 
     def operation(defn, &block)
