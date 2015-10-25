@@ -18,7 +18,7 @@ RSpec.describe Sorceror, 'create' do
     define_constant :CreatedObserver do
       include Sorceror::Observer
 
-      group :consistency
+      group :consistency, snapshot: true
 
       observer :created, ObserverModel do |model|
         $observer_model = model

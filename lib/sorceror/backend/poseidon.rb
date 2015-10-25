@@ -68,6 +68,8 @@ class Sorceror::Backend::Poseidon
 
     if consumer.in?([:all, :event])
       Sorceror::Observer.observer_groups.each do |group, options|
+        next unless options[:event]
+
         @distributor_threads += num_threads.times.map { DistributorThread::Event.new(self, topic: Sorceror::Config.event_topic, group: group, options: options) }
         Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
@@ -75,6 +77,8 @@ class Sorceror::Backend::Poseidon
 
     if consumer.in?([:all, :snapshot])
       Sorceror::Observer.observer_groups.each do |group, options|
+        next unless options[:snapshot]
+
         @distributor_threads += num_threads.times.map { DistributorThread::Snapshot.new(self, topic: Sorceror::Config.snapshot_topic, group: group, options: options) }
         Sorceror.info "[distributor:event] Starting #{num_threads} thread#{'s' if num_threads>1} topic:#{Sorceror::Config.snapshot_topic} and group:#{group}"
       end

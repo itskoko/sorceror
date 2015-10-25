@@ -52,6 +52,8 @@ class Sorceror::Backend::JrubyKafka
 
     if consumer.in?([:all, :event])
       Sorceror::Observer.observer_groups.each do |group, options|
+        next unless options[:event]
+
         @distributors << Distributor::Event.new(self, options.merge(topic: Sorceror::Config.event_topic, group: group, threads: @threads))
         Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.event_topic} and group:#{group}"
       end
@@ -59,6 +61,8 @@ class Sorceror::Backend::JrubyKafka
 
     if consumer.in?([:all, :snapshot])
       Sorceror::Observer.observer_groups.each do |group, options|
+        next unless options[:snapshot]
+
         @distributors << Distributor::Snapshot.new(self, options.merge(topic: Sorceror::Config.snapshot_topic, group: group, threads: @threads))
         Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.snapshot_topic} and group:#{group}"
       end

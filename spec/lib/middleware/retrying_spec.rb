@@ -92,7 +92,7 @@ RSpec.describe Sorceror::Middleware, 'Retrying' do
       define_constant :BasicObserver do
         include Sorceror::Observer
 
-        group :basic
+        group :basic, event: true
 
         observer :fired, BasicModel => :fired do |model|
           $observer_starts += 1

@@ -10,8 +10,10 @@ module Sorceror::Observer
     def observer(name, options, &block)
       defn = case options
       when Hash
+        raise "Snapshot group cannot observe events" unless Sorceror::Observer.observer_groups[@observer_group][:event]
         Definition::Event.new(*options.first)
       else
+        raise "Snapshot group cannot observe events" unless Sorceror::Observer.observer_groups[@observer_group][:snapshot]
         Definition::Snapshot.new(options)
       end
       defn.group = @observer_group

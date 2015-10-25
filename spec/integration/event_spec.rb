@@ -23,7 +23,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
     define_constant :BasicObserver do
       include Sorceror::Observer
 
-      group :basic
+      group :basic, event: true
 
       observer :fired, BasicModel => :fired do |instance, attributes|
         $observer_starts += 1
@@ -89,7 +89,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
           define_constant :NotTrailingObserver do
             include Sorceror::Observer
 
-            group :not_trailing, trail: false
+            group :not_trailing, event: true, trail: false
 
             observer :fired, BasicModel => :fired do |model, attributes|
               $not_trailing_fired += 1
@@ -114,7 +114,7 @@ RSpec.describe Sorceror::Backend, 'Event' do
           define_constant :TrailingObserver do
             include Sorceror::Observer
 
-            group :trailing, trail: true
+            group :trailing, event: true, trail: true
 
             observer :fired, BasicModel => :fired do |model, attributes|
               $trailing_fired += 1

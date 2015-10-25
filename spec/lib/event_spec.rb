@@ -24,7 +24,7 @@ RSpec.describe Sorceror do
     define_constant :BasicEventObserver do
       include Sorceror::Observer
 
-      group :basic
+      group :basic_event, event: true
 
       observer :basic_model_fired, BasicModel => :fired do |model, attrs|
         $event_observer_starts += 1
@@ -36,7 +36,7 @@ RSpec.describe Sorceror do
     define_constant :BasicSnapshotObserver do
       include Sorceror::Observer
 
-      group :basic
+      group :basic_snapshot, snapshot: true
 
       observer :basic_model_snapshots, BasicModel do |model|
         $snapshot_observer_starts += 1
