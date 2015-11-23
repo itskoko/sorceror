@@ -41,8 +41,6 @@ class Sorceror::MessageProcessor::Event
           observer = Sorceror::Observer.observers_by_name[observer_name]
           raise "[#{@message.type}][#{@message.id}] observer #{observer_name} no longer defined" unless observer
 
-          # keys = @model.fields.keys + ['id']
-          # observer.callback.call(@model.new(@message.attributes.slice(*keys)))
           observer.callback.call(@instance, @message.attributes)
 
           @instance.context.observer(group).persist

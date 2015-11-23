@@ -93,7 +93,8 @@ module Sorceror::Model
     @payloads << payload(name, attributes)
 
     unless @running_callbacks
-      message = Sorceror::Message::OperationBatch.new(:partition_key => partition_key,
+      message = Sorceror::Message::OperationBatch.new(:key           => partition_key,
+                                                      :partition_key => partition_key,
                                                       :payload       => {
         :id          => self.id,
         :operations  => @payloads.reverse,
@@ -171,7 +172,8 @@ module Sorceror::Model
       def publish_events!
         until events.empty? do
           event = events.shift
-          message = Sorceror::Message::Event.new(:partition_key => [@context.instance.partition_key, event].join(':'),
+          message = Sorceror::Message::Event.new(:key           => [@context.instance.partition_key, event[0]].join(':'),
+                                                 :partition_key => @context.instance.partition_key,
                                                  :payload       => {
             :id         => @context.instance.id,
             :type       => @context.instance.class.to_s,
@@ -186,7 +188,8 @@ module Sorceror::Model
       end
 
       def publish_snapshot!
-        message = Sorceror::Message::Snapshot.new(:partition_key => @context.instance.partition_key,
+        message = Sorceror::Message::Snapshot.new(:key           => @context.instance.partition_key,
+                                                  :partition_key => @context.instance.partition_key,
                                                   :payload       => {
           :id         => @context.instance.id,
           :type       => @context.instance.class.to_s,

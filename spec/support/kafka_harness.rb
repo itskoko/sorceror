@@ -5,7 +5,7 @@ require 'pathname'
 
 class KafkaHarness
   ROOT    = Pathname.new(File.expand_path("../../../", __FILE__))
-  VERSION = "0.8.1.1"
+  VERSION = "0.8.2.1"
   SERVER  = ROOT.join "kafka_2.10-#{VERSION}"
   TOPICS  = ['test.operations', 'test.events', 'test.snapshots']
 
@@ -48,7 +48,7 @@ class KafkaHarness
 
   def stop
     @pids.each do |_, pid|
-      Process.kill :TERM, pid
+      Process.kill :KILL, pid
     end
   end
 

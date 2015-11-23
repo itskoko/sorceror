@@ -1,10 +1,12 @@
 class Sorceror::Message
   attr_accessor :partition_key
+  attr_accessor :key
   attr_accessor :payload
 
   def initialize(options)
     @payload       = options.fetch(:payload)
-    @partition_key = options.fetch(:partition_key)
+    @key           = options.fetch(:key)
+    @partition_key = options.fetch(:partition_key, nil)
   end
 
   def parsed_payload
