@@ -69,7 +69,7 @@ class Sorceror::MessageProcessor::OperationBatch
     private
 
     def args
-      [@instance, @operation.attributes][0...@operation.proc.arity]
+      [@instance, @operation.attributes.clone][0...@operation.proc.arity]
     end
 
     class Skipped < Exception
