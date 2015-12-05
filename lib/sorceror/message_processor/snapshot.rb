@@ -13,12 +13,9 @@ class Sorceror::MessageProcessor::Snapshot
 
     # raise_or_warn_if_instance_missing  DRY with operation_batch
     unless @instance
-      error_message = "[#{@message.type}][#{@message.id}] unable to find instance. Something is wrong!"
-      if Sorceror::Config.skip_missing_instances
-        Sorceror.warn error_message
-      else
-        raise error_message
-      end
+      error = RuntimeError.new("[#{@message.type}][#{@message.id}] unable to find instance, skipping. Something is wrong!")
+      Sorceror::Config.error_notifier.call(error)
+      return
     end
 
     if model_observer_groups = Sorceror::Observer.observer_groups_by_model[@model]

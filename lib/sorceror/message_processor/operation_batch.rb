@@ -8,26 +8,24 @@ class Sorceror::MessageProcessor::OperationBatch
     raise "Model not defined #{@message.type}" unless @model
     @instance = @model.where(id: @message.id).first
 
-    if @instance.nil?
+    if @instance.nil? && @message.operations.first.name == :create
       @instance = @model.new(@message.operations.first.attributes)
     end
 
+    # raise_or_warn_if_instance_missing
+    # XXX This should incorporated into safe error handling protocol
+    unless @instance
+      error = RuntimeError.new("[#{@message.type}][#{@message.id}] unable to find instance, skipping. Something is wrong!")
+      Sorceror::Config.error_notifier.call(error)
+      return
+    end
+
     if @instance.context.operation.last_hash == @message.hash
-      Sorceror.warn "[#{@message.type}][#{@message.id}] skipping as "
+      Sorceror.warn "[#{@message.type}][#{@message.id}] skipping as duplicate"
       return
     end
 
     @instance.context.operation.current_hash = @message.hash
-
-    # raise_or_warn_if_instance_missing
-    unless @instance
-      error_message = "[#{message.type}][#{message.id}] unable to find instance. Something is wrong!"
-      if Sorceror::Config.skip_missing_instances
-        Sorceror.warn error_message
-      else
-        raise error_message
-      end
-    end
 
     unless @instance.context.operation.pending?
       @message.operations.each do |operation|

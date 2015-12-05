@@ -2,7 +2,7 @@ module Sorceror::Config
   mattr_accessor :app, :backend, :kafka_backend, :kafka_hosts, :zookeeper_hosts,
                  :logger, :subscriber_threads, :operation_topic, :event_topic, :snapshot_topic,
                  :error_notifier, :retry, :max_retries, :trail, :subscriber_options, :publisher_options,
-                 :middleware_chain, :skip_missing_instances
+                 :middleware_chain
 
   def self.backend=(value)
     if value == :real
@@ -53,7 +53,6 @@ module Sorceror::Config
     self.subscriber_options     ||= {}
     self.publisher_options      ||= {}
     self.max_retries            ||= 5
-    self.skip_missing_instances ||= false
   end
 
   def self.configure(&block)
