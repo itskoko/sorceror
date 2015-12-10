@@ -6,6 +6,7 @@ module BackendHelper
       config.logger = Logger.new(STDERR); STDERR.sync = true
       config.logger.level = ENV["LOGGER_LEVEL"] ? ENV["LOGGER_LEVEL"].to_i : Logger::ERROR
       config.retry = false
+      config.dead_letter = false
       config.kafka_hosts = kafka_hosts
       config.zookeeper_hosts = zookeeper_hosts
       config.subscriber_threads = 1

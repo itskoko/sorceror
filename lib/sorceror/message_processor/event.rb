@@ -14,11 +14,10 @@ class Sorceror::MessageProcessor::Event
     # raise_or_warn_if_instance_missing  DRY with operation_batch
     unless @instance
       error = RuntimeError.new("[#{@message.type}][#{@message.id}] unable to find instance, skipping. Something is wrong!")
-      Sorceror::Config.error_notifier.call(error)
-      return
+      raise error
     end
 
-    if model_observer_groups = Sorceror::Observer.observer_groups_by_model[@model]
+    if model_observer_groups = Sorceror::Observer.event_observer_groups[@model]
       model_observer_groups = model_observer_groups.select { |group, _| group == @group_name }
 
       model_observer_groups.each do |group, model_observers|
@@ -35,14 +34,16 @@ class Sorceror::MessageProcessor::Event
 
       model_observer_groups.each do |group, model_observers|
         while observer_name = @instance.context.observer(group).shift_queued
-          observer = Sorceror::Observer.observers_by_name[observer_name]
-          raise "[#{@message.type}][#{@message.id}] observer #{observer_name} no longer defined" unless observer
+          @observer = Sorceror::Observer.observers_by_name[observer_name]
+          raise "[#{@message.type}][#{@message.id}] observer #{observer_name} no longer defined" unless @observer
 
-          observer.callback.call(@instance, @message.attributes)
+          @observer.callback.call(@instance, @message.attributes)
 
           @instance.context.observer(group).persist
         end
       end
     end
+  rescue StandardError => e
+    raise Sorceror::Error::MessageProcessor.new(e, @observer.try(:to_s) || 'event')
   end
 end

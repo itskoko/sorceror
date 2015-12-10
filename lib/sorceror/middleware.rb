@@ -1,7 +1,7 @@
 class Sorceror::Middleware
   extend Sorceror::Autoload
 
-  DEFAULT = [:Retrying]
+  DEFAULT = [:DeadLetter, :Retrying]
   autoload *DEFAULT
 
   def self.add(middleware)

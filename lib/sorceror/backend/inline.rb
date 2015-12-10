@@ -45,4 +45,12 @@ class Sorceror::Backend::Inline
   def operations
     @fake.operations
   end
+
+  def events
+    @fake.events
+  end
+
+  def snapshots
+    @fake.snapshots
+  end
 end

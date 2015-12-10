@@ -64,4 +64,8 @@ RSpec.describe Sorceror, 'Middleware Spec' do
       expect($messages.length).to eq(0)
     end
   end
+
+  it 'dead letters before retrying' do
+    expect(Sorceror::Middleware::DEFAULT).to eq([:DeadLetter, :Retrying])
+  end
 end

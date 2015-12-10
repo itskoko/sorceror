@@ -23,22 +23,31 @@ module Sorceror::Observer
       raise "group must be defined" unless @observer_group
       raise "#{defn} observer already defined" if Sorceror::Observer.observers_by_name[defn.to_s]
 
-      Sorceror::Observer.observer_groups_by_model[defn.model] ||= {}
-      Sorceror::Observer.observer_groups_by_model[defn.model][@observer_group] ||= []
-      Sorceror::Observer.observer_groups_by_model[defn.model][@observer_group] << defn
+      case defn
+      when Definition::Event
+        Sorceror::Observer.event_observer_groups[defn.model] ||= {}
+        Sorceror::Observer.event_observer_groups[defn.model][@observer_group] ||= []
+        Sorceror::Observer.event_observer_groups[defn.model][@observer_group] << defn
+      when Definition::Snapshot
+        Sorceror::Observer.snapshot_observer_groups[defn.model] ||= {}
+        Sorceror::Observer.snapshot_observer_groups[defn.model][@observer_group] ||= []
+        Sorceror::Observer.snapshot_observer_groups[defn.model][@observer_group] << defn
+      end
 
       Sorceror::Observer.observers_by_name[defn.to_s] = defn
     end
   end
 
   def self.reset!
-    self.observer_groups_by_model = {}
+    self.event_observer_groups = {}
+    self.snapshot_observer_groups = {}
     self.observer_groups = {}
     self.observers_by_name = {}
   end
 
   class << self
-    attr_accessor :observer_groups_by_model
+    attr_accessor :snapshot_observer_groups
+    attr_accessor :event_observer_groups
     attr_accessor :observers_by_name
     attr_accessor :observer_groups
   end

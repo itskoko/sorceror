@@ -66,7 +66,7 @@ module Sorceror::Model
     begin
       self.send(:insert_as_root)
     rescue => e
-      Sorceror.warn "[#{self.class}][#{self.id}] ignoring #{e.message}\n#{e.backtrace.join("\n")}"
+      Sorceror.warn "[#{self.class}][#{self.id}] ignoring #{e.message}"
     end
 
     self

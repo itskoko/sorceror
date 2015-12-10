@@ -16,8 +16,7 @@ class Sorceror::MessageProcessor::OperationBatch
     # XXX This should incorporated into safe error handling protocol
     unless @instance
       error = RuntimeError.new("[#{@message.type}][#{@message.id}] unable to find instance, skipping. Something is wrong!")
-      Sorceror::Config.error_notifier.call(error)
-      return
+      raise error
     end
 
     if @instance.context.operation.last_hash == @message.hash
@@ -37,6 +36,8 @@ class Sorceror::MessageProcessor::OperationBatch
     end
 
     @instance.context.operation.publish!
+  rescue StandardError => e
+    raise Sorceror::Error::MessageProcessor.new(e, 'operation-batch')
   end
 
   class Context
