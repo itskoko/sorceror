@@ -88,7 +88,6 @@ class Sorceror::Backend::JrubyKafka
 
   def raw_publish(message)
     @connection.send_msg(message.topic, message.key, message.partition_key, message.to_s)
-    Sorceror.info "[publish][kafka] #{message.topic}/#{message.partition_key}/#{message.key}"
   rescue StandardError => e
     raise Sorceror::Error::Publisher.new(e, :payload => message.payload)
   end
@@ -164,7 +163,7 @@ class Sorceror::Backend::JrubyKafka
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} partition:#{metadata.partition}"
+        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} partition:#{metadata.partition}"
         Sorceror::MessageProcessor.process(Sorceror::Message::OperationBatch.new(payload: payload, key: metadata.key))
       end
     end
@@ -179,7 +178,7 @@ class Sorceror::Backend::JrubyKafka
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
+        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
         Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload, key: metadata.key), @group_name)
       end
     end
@@ -194,7 +193,7 @@ class Sorceror::Backend::JrubyKafka
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload} topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
+        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
         Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload, key: metadata.key), @group_name)
       end
     end

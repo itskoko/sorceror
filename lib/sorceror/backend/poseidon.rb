@@ -111,7 +111,6 @@ class Sorceror::Backend::Poseidon
   def raw_publish(message)
     tries ||= 5
     if @connection.send_messages([Poseidon::MessageToSend.new(message.topic, message.to_s, message.key)])
-      Sorceror.info "[publish] [kafka] #{message.topic}/#{message.key} #{message.payload}"
     else
       raise Sorceror::Error::Publisher.new(Exception.new('There were no messages to publish?'), :payload => message.payload)
     end
@@ -244,7 +243,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} partition:#{metadata.partition} #{@consumer.id}"
+        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} partition:#{metadata.partition} #{@consumer.id}"
 
         Sorceror::MessageProcessor.process(Sorceror::Message::OperationBatch.new(payload: payload.value, key: payload.key))
         metadata.ack
@@ -273,7 +272,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
+        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
         Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload.value, key: payload.key), @group_name)
         metadata.ack
@@ -302,7 +301,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] #{payload.value} topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
+        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
         Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload.value, key: payload.key), @group_name)
         metadata.ack

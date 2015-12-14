@@ -59,6 +59,8 @@ module Sorceror::Backend
         ensure_connected
         driver.publish(*args)
       end
+      message = args[0]
+      Sorceror.info "[publish][kafka] #{message.topic}:#{message.partition_key}:#{message.key} #{message}"
     end
 
     def start_subscriber(consumer)

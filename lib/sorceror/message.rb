@@ -1,19 +1,17 @@
 class Sorceror::Message
-  attr_accessor :partition_key
   attr_accessor :key
+  attr_accessor :partition_key
   attr_accessor :payload
 
   def initialize(options)
-    @payload       = options.fetch(:payload)
-    @key           = options.fetch(:key)
-    @partition_key = options.fetch(:partition_key, nil)
+    @payload  = options.fetch(:payload)
   end
 
   def parsed_payload
     @parsed_payload ||= if payload.is_a?(Hash)
       payload.with_indifferent_access
     else
-      MultiJson.load(payload)
+      MultiJson.load(payload).with_indifferent_access
     end
   end
 
@@ -30,6 +28,14 @@ class Sorceror::Message
   end
 
   def topic
+    raise NotImplementedError
+  end
+
+  def partition_key
+    "#{parsed_payload[:type]}/#{parsed_payload[:id]}"
+  end
+
+  def key
     raise NotImplementedError
   end
 
@@ -56,6 +62,10 @@ class Sorceror::Message
 
     def hash
       operations.collect(&:hash).hash
+    end
+
+    def key
+      partition_key
     end
 
     class Operation
@@ -100,15 +110,19 @@ class Sorceror::Message
     end
 
     def id
-      parsed_payload['id']
+      parsed_payload[:id]
     end
 
     def attributes
-      parsed_payload['attributes']
+      parsed_payload[:attributes]
     end
 
     def name
-      parsed_payload['name'].to_sym
+      parsed_payload[:name].to_sym
+    end
+
+    def key
+      "#{partition_key}/#{parsed_payload[:name]}/#{parsed_payload.hash}"
     end
   end
 
@@ -118,11 +132,15 @@ class Sorceror::Message
     end
 
     def id
-      parsed_payload['id']
+      parsed_payload[:id]
     end
 
     def attributes
-      parsed_payload['attributes']
+      parsed_payload[:attributes]
+    end
+
+    def key
+      partition_key
     end
   end
 end

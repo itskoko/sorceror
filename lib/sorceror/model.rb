@@ -93,9 +93,7 @@ module Sorceror::Model
     @payloads << payload(name, attributes)
 
     unless @running_callbacks
-      message = Sorceror::Message::OperationBatch.new(:key           => partition_key,
-                                                      :partition_key => partition_key,
-                                                      :payload       => {
+      message = Sorceror::Message::OperationBatch.new(:payload => {
         :id          => self.id,
         :operations  => @payloads.reverse,
         :type        => self.class.to_s
@@ -103,10 +101,6 @@ module Sorceror::Model
 
       Sorceror::Backend.publish(message)
     end
-  end
-
-  def partition_key
-    "#{model_name.plural}/#{self.id}"
   end
 
   class Context
@@ -172,9 +166,7 @@ module Sorceror::Model
       def publish_events!
         until events.empty? do
           event = events.shift
-          message = Sorceror::Message::Event.new(:key           => [@context.instance.partition_key, event[0]].join(':'),
-                                                 :partition_key => @context.instance.partition_key,
-                                                 :payload       => {
+          message = Sorceror::Message::Event.new(:payload       => {
             :id         => @context.instance.id,
             :type       => @context.instance.class.to_s,
             :name       => event[0],
@@ -188,9 +180,7 @@ module Sorceror::Model
       end
 
       def publish_snapshot!
-        message = Sorceror::Message::Snapshot.new(:key           => @context.instance.partition_key,
-                                                  :partition_key => @context.instance.partition_key,
-                                                  :payload       => {
+        message = Sorceror::Message::Snapshot.new(:payload       => {
           :id         => @context.instance.id,
           :type       => @context.instance.class.to_s,
           :attributes => @context.instance.as_json

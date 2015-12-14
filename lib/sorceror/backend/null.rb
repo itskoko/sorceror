@@ -14,7 +14,6 @@ class Sorceror::Backend::Null
   end
 
   def publish(message)
-    Sorceror.debug "[publish] [null] #{message.topic}/#{message.partition_key}/#{message.key} #{message.to_s}"
   end
 
   def start_subscriber(consumer)
