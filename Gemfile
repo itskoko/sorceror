@@ -5,8 +5,6 @@ gem 'rake'
 gem 'rspec'
 gem 'rspec-retry', :require => false
 
-gem 'mongoid', '~> 4.0'
-
 gem 'pry'
 
 gem "codeclimate-test-reporter", group: :test, require: nil

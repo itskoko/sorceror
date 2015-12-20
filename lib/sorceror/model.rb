@@ -51,7 +51,7 @@ module Sorceror::Model
   end
 
   def persist
-    self.collection.find(self.atomic_selector).update(self.as_document, [ :upsert ])
+    self.collection.find(self.atomic_selector).update_one(self.as_document, upsert: true)
   end
 
   def context
@@ -137,7 +137,7 @@ module Sorceror::Model
 
       def persist(last: false)
         @attrs.merge!(last_hash: current_hash) if last
-        @context.instance.collection.find(@context.instance.atomic_selector).update('$set' => { FIELD => @attrs })
+        @context.instance.collection.find(@context.instance.atomic_selector).update_one('$set' => { FIELD => @attrs })
       end
 
       def events
@@ -208,7 +208,7 @@ module Sorceror::Model
       end
 
       def persist
-        @context.instance.collection.find(@context.instance.atomic_selector).update('$set' => { "#{FIELD}.#{@observer_group}" => @queued }) if @queued
+        @context.instance.collection.find(@context.instance.atomic_selector).update_one('$set' => { "#{FIELD}.#{@observer_group}" => @queued }) if @queued
       end
 
       def queue(observer)

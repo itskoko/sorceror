@@ -38,7 +38,7 @@ RSpec.describe Sorceror, 'create' do
         ObserverModel.new(id: id, field_1: 'field_1').create
 
         process_operations!
-        ObserverModel.collection.find(_id: id).update('$set' => { field_1: 'field_1_updated' })
+        ObserverModel.collection.find(_id: id).update_one('$set' => { field_1: 'field_1_updated' })
         process_snapshots!
 
         expect($observer_model.id).to      eq(id)

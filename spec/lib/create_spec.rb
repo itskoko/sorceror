@@ -37,7 +37,7 @@ RSpec.describe Sorceror, 'create' do
   end
 
   context 'when persistence fails' do
-    before { allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_raise("DB DOWN!!!") }
+    before { allow_any_instance_of(Mongo::Server::Connection).to receive(:dispatch).and_raise("DB DOWN!!!") }
 
     it 'the operation does not fail' do
       expect { CreateModel.new(id: BSON::ObjectId.new, field_1: 'field_1', field_2: 1).create }.to_not raise_error
@@ -49,7 +49,7 @@ RSpec.describe Sorceror, 'create' do
 
         CreateModel.new(id: id, field_1: 'field_1', field_2: 1).create
 
-        allow_any_instance_of(Moped::Operation::Write).to receive(:execute).and_call_original
+        allow_any_instance_of(Mongo::Server::Connection).to receive(:dispatch).and_call_original
 
         process_operations!
 
