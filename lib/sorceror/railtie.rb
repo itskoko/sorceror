@@ -3,8 +3,14 @@ class Sorceror::Railtie < Rails::Railtie
     config.before_initialize do
       Mongoid.preload_models = true
 
-      if Sorceror::Config.retry.nil?
-        Sorceror::Config.retry = Rails.env.test? ? false : true
+      if Rails.env.test?
+        if Sorceror::Config.retry.nil?
+          Sorceror::Config.retry = false
+        end
+
+        if Sorceror::Config.dead_letter.nil?
+          Sorceror::Config.dead_letter = false
+        end
       end
     end
 
