@@ -8,6 +8,11 @@ RSpec.describe Sorceror, 'create' do
 
       field :field_1, type: String
       field :field_2, type: Integer
+
+      # TODO Seperate spec to test overriding key
+      def key
+        field_1
+      end
     end
   end
 

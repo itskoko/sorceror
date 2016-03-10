@@ -164,7 +164,7 @@ class Sorceror::Backend::JrubyKafka
 
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} partition:#{metadata.partition}"
-        Sorceror::MessageProcessor.process(Sorceror::Message::OperationBatch.new(payload: payload, key: metadata.key))
+        Sorceror::MessageProcessor.process(Sorceror::Message::OperationBatch.new(payload: payload))
       end
     end
 
@@ -179,7 +179,7 @@ class Sorceror::Backend::JrubyKafka
 
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
-        Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload, key: metadata.key), @group_name)
+        Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload), @group_name)
       end
     end
 
@@ -194,7 +194,7 @@ class Sorceror::Backend::JrubyKafka
 
       def process(payload, metadata)
         Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{metadata.offset} parition:#{metadata.partition}"
-        Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload, key: metadata.key), @group_name)
+        Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload), @group_name)
       end
     end
   end

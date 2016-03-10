@@ -68,9 +68,7 @@ class Sorceror::Backend::Fake
   end
 
   def _publish(message)
-    marshalled_message = message.class.new(payload: message.to_s,
-                                           key: message.key,
-                                           partition_key: message.partition_key)
+    marshalled_message = message.class.new(payload: message.to_s)
 
     if message.class == Sorceror::Message::OperationBatch
       Sorceror::MessageProcessor.process(marshalled_message)

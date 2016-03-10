@@ -1,10 +1,9 @@
 class Sorceror::Message
-  attr_accessor :key
-  attr_accessor :partition_key
   attr_accessor :payload
 
   def initialize(options)
-    @payload  = options.fetch(:payload)
+    @payload        = options.fetch(:payload)
+    @partition_with = options.fetch(:partition_with, nil)
   end
 
   def parsed_payload
@@ -32,7 +31,9 @@ class Sorceror::Message
   end
 
   def partition_key
-    "#{parsed_payload[:type]}/#{parsed_payload[:id]}"
+    raise "parition_with not set" unless @partition_with
+
+    "#{parsed_payload[:type]}/#{@partition_with}"
   end
 
   def key

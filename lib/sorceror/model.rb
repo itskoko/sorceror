@@ -50,6 +50,10 @@ module Sorceror::Model
     end
   end
 
+  def key
+    self.id
+  end
+
   def persist
     self.collection.find(self.atomic_selector).update_one(self.as_document, upsert: true)
   end
@@ -93,11 +97,13 @@ module Sorceror::Model
     @payloads << payload(name, attributes)
 
     unless @running_callbacks
-      message = Sorceror::Message::OperationBatch.new(:payload => {
-        :id          => self.id,
-        :operations  => @payloads.reverse,
-        :type        => self.class.to_s
-      })
+      message = Sorceror::Message::OperationBatch.new(
+        :partition_with => self.key,
+        :payload => {
+          :id          => self.id,
+          :operations  => @payloads.reverse,
+          :type        => self.class.to_s
+        })
 
       Sorceror::Backend.publish(message)
     end
@@ -166,12 +172,14 @@ module Sorceror::Model
       def publish_events!
         until events.empty? do
           event = events.shift
-          message = Sorceror::Message::Event.new(:payload       => {
-            :id         => @context.instance.id,
-            :type       => @context.instance.class.to_s,
-            :name       => event[0],
-            :attributes => event[1]
-          })
+          message = Sorceror::Message::Event.new(
+            :partition_with => @context.instance.key,
+            :payload       => {
+              :id         => @context.instance.id,
+              :type       => @context.instance.class.to_s,
+              :name       => event[0],
+              :attributes => event[1]
+            })
 
           Sorceror::Backend.publish(message)
 
@@ -180,11 +188,13 @@ module Sorceror::Model
       end
 
       def publish_snapshot!
-        message = Sorceror::Message::Snapshot.new(:payload       => {
-          :id         => @context.instance.id,
-          :type       => @context.instance.class.to_s,
-          :attributes => @context.instance.as_json
-        })
+        message = Sorceror::Message::Snapshot.new(
+          :partition_with => @context.instance.key,
+          :payload       => {
+            :id         => @context.instance.id,
+            :type       => @context.instance.class.to_s,
+            :attributes => @context.instance.as_json
+          })
 
         Sorceror::Backend.publish(message)
       end
