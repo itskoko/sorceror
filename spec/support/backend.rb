@@ -50,6 +50,10 @@ module BackendHelper
 end
 
 RSpec.configure do |config|
+  config.before do
+    Sorceror.configure { |config| config.app = 'test' }
+  end
+
   config.after do
     Sorceror::Backend.stop_subscriber if Sorceror::Backend.driver
     Sorceror::Observer.reset!

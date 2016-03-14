@@ -16,6 +16,8 @@ module Sorceror::Model
     mattr_accessor :operations
     self.operations = { create: { proc: -> _ {}, event: :created  } }
 
+    mattr_accessor :topic_prefix
+
     [:save, :save!, :update, :update!, :update_attributes!, :update_attributes].each do |method|
       alias_method "mongoid_#{method}", method
       define_method(method) do |*args, &block|
@@ -30,8 +32,10 @@ module Sorceror::Model
 
   class << self
     attr_accessor :models
+    attr_accessor :operation_topics
   end
   self.models = {}
+  self.operation_topics = Set.new
 
   module ClassMethods
     def create(attributes={})
@@ -39,6 +43,8 @@ module Sorceror::Model
     end
 
     def operation(defn, &block)
+      self.topic(Sorceror::Config.app)
+
       name, event_name = defn.first
 
       self.operations[name.to_sym] = { proc: block, event: event_name }
@@ -47,6 +53,13 @@ module Sorceror::Model
         attributes = args[0] || {}
         publish_operation(name, attributes)
       end
+    end
+
+    def topic(topic)
+      return if topic_prefix
+
+      self.topic_prefix = topic
+      Sorceror::Model.operation_topics << "#{topic}.operations"
     end
   end
 
@@ -99,6 +112,7 @@ module Sorceror::Model
     unless @running_callbacks
       message = Sorceror::Message::OperationBatch.new(
         :partition_with => self.key,
+        :topic => "#{self.topic_prefix}.operations",
         :payload => {
           :id          => self.id,
           :operations  => @payloads.reverse,
@@ -174,6 +188,7 @@ module Sorceror::Model
           event = events.shift
           message = Sorceror::Message::Event.new(
             :partition_with => @context.instance.key,
+            :topic          => "#{@context.instance.topic_prefix}.events",
             :payload       => {
               :id         => @context.instance.id,
               :type       => @context.instance.class.to_s,
@@ -190,6 +205,7 @@ module Sorceror::Model
       def publish_snapshot!
         message = Sorceror::Message::Snapshot.new(
           :partition_with => @context.instance.key,
+          :topic          => "#{@context.instance.topic_prefix}.snapshots",
           :payload       => {
             :id         => @context.instance.id,
             :type       => @context.instance.class.to_s,

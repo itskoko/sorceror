@@ -44,8 +44,8 @@ class Sorceror::Backend::JrubyKafka
     @distributors = []
 
     if consumer.in?([:all, :operation])
-      Sorceror::Config.operation_topic.tap do |topic|
-        @distributors << Distributor::Operation.new(self, topic: topic, threads: @threads)
+      Sorceror::Model.operation_topics.each do |topic|
+        @distributors << Distributor::Operation.new(self, topic: topic.to_s, threads: @threads)
         Sorceror.info "[distributor:operation] Starting #{@threads} topic:#{topic}"
       end
     end
@@ -54,8 +54,8 @@ class Sorceror::Backend::JrubyKafka
       Sorceror::Observer.observer_groups.each do |group, options|
         next unless options[:event]
 
-        @distributors << Distributor::Event.new(self, options.merge(topic: Sorceror::Config.event_topic, group: group, threads: @threads))
-        Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.event_topic} and group:#{group}"
+        @distributors << Distributor::Event.new(self, options.merge(topic: options[:topic_name].to_s, group: group, threads: @threads))
+        Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{options[:topic_name]} and group:#{group}"
       end
     end
 
@@ -63,8 +63,8 @@ class Sorceror::Backend::JrubyKafka
       Sorceror::Observer.observer_groups.each do |group, options|
         next unless options[:snapshot]
 
-        @distributors << Distributor::Snapshot.new(self, options.merge(topic: Sorceror::Config.snapshot_topic, group: group, threads: @threads))
-        Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{Sorceror::Config.snapshot_topic} and group:#{group}"
+        @distributors << Distributor::Snapshot.new(self, options.merge(topic: options[:topic_name].to_s, group: group, threads: @threads))
+        Sorceror.info "[distributor:event] Starting #{@threads} threads: topic:#{options[:topic_name]} and group:#{group}"
       end
     end
   end

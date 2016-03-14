@@ -12,6 +12,8 @@ RSpec.describe Sorceror::Backend, 'Event' do
       include Mongoid::Document
       include Sorceror::Model
 
+      topic :test
+
       field :field_1, type: String
       field :fired,   type: Boolean
 

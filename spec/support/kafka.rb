@@ -50,6 +50,10 @@ module KafkaHelper
   def zookeeper_hosts
     ["localhost:#{KafkaHarness::ZOOKP_PORT}"]
   end
+
+  def create_topics!(prefix)
+    $tc.create_topics(prefix)
+  end
 end
 
 if ENV['POSEIDON_LOGGER_LEVEL']

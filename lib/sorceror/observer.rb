@@ -4,6 +4,18 @@ module Sorceror::Observer
   module ClassMethods
     def group(name, options={})
       Sorceror::Observer.observer_groups[name] = options # XXX This can be defined multiple times. Need to protect against being overriden?
+
+      topic = options.fetch(:topic, Sorceror::Config.app)
+
+      topic_name = if options[:event]
+                     "#{topic}.events"
+                   elsif options[:snapshot]
+                     "#{topic}.snapshot"
+                   else
+                     raise "Group must either be snapshot or event"
+                   end
+      options[:topic_name] = topic_name
+
       @observer_group = name
     end
 

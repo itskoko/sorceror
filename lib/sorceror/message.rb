@@ -3,6 +3,7 @@ class Sorceror::Message
 
   def initialize(options)
     @payload        = options.fetch(:payload)
+    @topic          = options.fetch(:topic, nil)
     @partition_with = options.fetch(:partition_with, nil)
   end
 
@@ -26,14 +27,15 @@ class Sorceror::Message
     raise NotImplementedError
   end
 
-  def topic
-    raise NotImplementedError
-  end
-
   def partition_key
     raise "parition_with not set" unless @partition_with
 
     "#{parsed_payload[:type]}/#{@partition_with}"
+  end
+
+  def topic
+    raise "topic not set" unless @topic
+    @topic
   end
 
   def key
@@ -41,10 +43,6 @@ class Sorceror::Message
   end
 
   class OperationBatch < self
-    def topic
-      Sorceror::Config.operation_topic
-    end
-
     def id
       parsed_payload['id']
     end
@@ -106,10 +104,6 @@ class Sorceror::Message
   end
 
   class Event < self
-    def topic
-      Sorceror::Config.event_topic
-    end
-
     def id
       parsed_payload[:id]
     end
@@ -128,10 +122,6 @@ class Sorceror::Message
   end
 
   class Snapshot < self
-    def topic
-      Sorceror::Config.snapshot_topic
-    end
-
     def id
       parsed_payload[:id]
     end

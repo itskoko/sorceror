@@ -1,6 +1,6 @@
 module Sorceror::Config
   mattr_accessor :app, :backend, :kafka_backend, :kafka_hosts, :zookeeper_hosts,
-                 :logger, :subscriber_threads, :operation_topic, :event_topic, :snapshot_topic,
+                 :logger, :subscriber_threads,
                  :error_notifier, :retry, :max_retries, :trail, :subscriber_options, :publisher_options,
                  :middleware_chain, :dead_letter
 
@@ -42,9 +42,6 @@ module Sorceror::Config
     self.backend             ||= :real
     self.kafka_hosts         ||= ['localhost:9092']
     self.zookeeper_hosts     ||= ['localhost:2181']
-    self.operation_topic     ||= "#{self.app}.operations"
-    self.event_topic         ||= "#{self.app}.events"
-    self.snapshot_topic      ||= "#{self.app}.snapshots"
     self.logger              ||= defined?(Rails) ? Rails.logger : Logger.new(STDERR).tap { |l| l.level = Logger::WARN }
     self.subscriber_threads  ||= 10
     self.error_notifier      ||= proc {}

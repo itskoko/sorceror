@@ -7,7 +7,7 @@ class KafkaHarness
   ROOT    = Pathname.new(File.expand_path("../../../", __FILE__))
   VERSION = "0.8.2.1"
   SERVER  = ROOT.join "kafka_2.10-#{VERSION}"
-  TOPICS  = ['test.operations', 'test.events', 'test.snapshots']
+  TOPICS  = Set.new(['test.operations', 'test.events', 'test.snapshots'])
 
   KAFKA_PORT  = 29092
   KAFKA_BIN   = SERVER.join("bin", "kafka-server-start.sh")
@@ -77,6 +77,15 @@ class KafkaHarness
   def create_test_topic
     TOPICS.each do |topic|
       sh "#{KAFKA_TOPIC} --zookeeper localhost:#{ZOOKP_PORT} --create --topic #{topic} --partitions 1 --replication-factor 1"
+    end
+  end
+
+  def create_topics(topic_prefix)
+    ['operations', 'events', 'snapshots'].each do |topic_suffix|
+      topic = "#{topic_prefix}.#{topic_suffix}"
+      next if TOPICS.include?(topic)
+      sh "#{KAFKA_TOPIC} --zookeeper localhost:#{ZOOKP_PORT} --create --topic #{topic}  --partitions 1 --replication-factor 1"
+      TOPICS << topic
     end
   end
 
