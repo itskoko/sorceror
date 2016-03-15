@@ -10,7 +10,7 @@ module Sorceror::Observer
       topic_name = if options[:event]
                      "#{topic}.events"
                    elsif options[:snapshot]
-                     "#{topic}.snapshot"
+                     "#{topic}.snapshots"
                    else
                      raise "Group must either be snapshot or event"
                    end
