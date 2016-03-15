@@ -27,6 +27,8 @@ module Sorceror::Model
 
     Sorceror::Model.models[self.model_name.name] = self
 
+    topic(Sorceror::Config.app)
+
     include Sorceror::Serializer
   end
 
@@ -43,8 +45,6 @@ module Sorceror::Model
     end
 
     def operation(defn, &block)
-      self.topic(Sorceror::Config.app)
-
       name, event_name = defn.first
 
       self.operations[name.to_sym] = { proc: block, event: event_name }
@@ -56,8 +56,6 @@ module Sorceror::Model
     end
 
     def topic(topic)
-      return if topic_prefix
-
       self.topic_prefix = topic
       Sorceror::Model.operation_topics << "#{topic}.operations"
     end
