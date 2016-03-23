@@ -19,6 +19,9 @@ RSpec.describe Sorceror::Middleware, 'Dead Letter' do
     end
   end
 
+  before { Timecop.freeze }
+  after  { Timecop.return }
+
   let(:dead_letter)    { false }
   let(:max_retries)    { 100 }
 
@@ -101,7 +104,7 @@ RSpec.describe Sorceror::Middleware, 'Dead Letter' do
 
         dead_message = Sorceror::Middleware::DeadLetter.queue.first
         expect(dead_message.type).to      eq('Event')
-        expect(dead_message.payload).to   eq(JSON.dump(id: instance.id, type: 'BasicModel', name: 'fired', attributes: {}))
+        expect(dead_message.payload).to   eq(JSON.dump(id: instance.id, type: 'BasicModel', name: 'fired', at: Time.now.to_f, attributes: {}))
         expect(dead_message.exception).to match(/RuntimeError.*event fail!$/)
         expect(dead_message.operation).to eq('event_basic:didfire')
       end

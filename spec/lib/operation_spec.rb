@@ -24,6 +24,9 @@ RSpec.describe Sorceror do
     end
   end
 
+  before { Timecop.freeze }
+  after  { Timecop.return }
+
   before { use_backend(:fake) }
 
   describe 'Operation execution' do
@@ -47,6 +50,7 @@ RSpec.describe Sorceror do
       expect(Sorceror::Backend.driver.events[1].id).to         eq(instance.id)
       expect(Sorceror::Backend.driver.events[1].name).to       eq(:fired)
       expect(Sorceror::Backend.driver.events[1].attributes).to eq({})
+      expect(Sorceror::Backend.driver.events[1].at).to         eq(Time.now.to_f)
     end
 
     it 'publishes the correct snapshot' do

@@ -116,6 +116,10 @@ class Sorceror::Message
       parsed_payload[:name].to_sym
     end
 
+    def at
+      parsed_payload[:at]
+    end
+
     def key
       "#{partition_key}/#{parsed_payload[:name]}/#{parsed_payload.hash}"
     end

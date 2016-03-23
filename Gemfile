@@ -4,6 +4,7 @@ gemspec
 gem 'rake'
 gem 'rspec'
 gem 'rspec-retry', :require => false
+gem 'timecop'
 
 gem 'pry'
 

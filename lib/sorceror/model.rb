@@ -191,6 +191,7 @@ module Sorceror::Model
               :id         => @context.instance.id,
               :type       => @context.instance.class.to_s,
               :name       => event[0],
+              :at         => Time.now.to_f,
               :attributes => event[1]
             })
 
