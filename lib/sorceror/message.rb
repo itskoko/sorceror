@@ -1,10 +1,11 @@
 class Sorceror::Message
-  attr_accessor :payload
+  attr_reader :payload
+  attr_reader :partition_key
 
   def initialize(options)
-    @payload        = options.fetch(:payload)
-    @topic          = options.fetch(:topic, nil)
-    @partition_with = options.fetch(:partition_with, nil)
+    @payload       = options.fetch(:payload)
+    @topic         = options.fetch(:topic, nil)
+    @partition_key = options.fetch(:partition_key, nil).to_s
   end
 
   def parsed_payload
@@ -25,12 +26,6 @@ class Sorceror::Message
 
   def hash
     raise NotImplementedError
-  end
-
-  def partition_key
-    raise "parition_with not set" unless @partition_with
-
-    "#{parsed_payload[:type]}/#{@partition_with}"
   end
 
   def topic

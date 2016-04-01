@@ -62,7 +62,7 @@ module Sorceror::Model
   end
 
   def key
-    self.id
+    "#{self.class}/#{self.id}"
   end
 
   def persist
@@ -109,7 +109,7 @@ module Sorceror::Model
 
     unless @running_callbacks
       message = Sorceror::Message::OperationBatch.new(
-        :partition_with => self.key,
+        :partition_key => self.key,
         :topic => "#{self.topic_prefix}.operations",
         :payload => {
           :id          => self.id,
@@ -185,7 +185,7 @@ module Sorceror::Model
         until events.empty? do
           event = events.shift
           message = Sorceror::Message::Event.new(
-            :partition_with => @context.instance.key,
+            :partition_key => @context.instance.key,
             :topic          => "#{@context.instance.topic_prefix}.events",
             :payload       => {
               :id         => @context.instance.id,
@@ -203,7 +203,7 @@ module Sorceror::Model
 
       def publish_snapshot!
         message = Sorceror::Message::Snapshot.new(
-          :partition_with => @context.instance.key,
+          :partition_key => @context.instance.key,
           :topic          => "#{@context.instance.topic_prefix}.snapshots",
           :payload       => {
             :id         => @context.instance.id,
