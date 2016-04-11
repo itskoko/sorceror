@@ -25,7 +25,8 @@ class Sorceror::MessageProcessor::Snapshot
         # possibility during rebalancing)
 
         unless @instance.context.observer(group).pending?
-          observers = model_observers.select { |ob| ob.is_a?(Sorceror::Observer::Definition::Snapshot) }
+          observers = model_observers.select { |ob| ob.is_a?(Sorceror::Observer::Definition::Snapshot) &&
+                                               (@filter.empty? || ob.group.in?(@filter)) }
           observers.each { |ob| @instance.context.observer(group).queue(ob.to_s) }
           @instance.context.observer(group).persist
         end
