@@ -217,7 +217,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def ack
-        Sorceror.info "[kafka] [commit] topic:#{@consumer.topic} group:#{@group} offset:#{@offset+1} partition:#{@partition}"
+        Sorceror.debug "[kafka] [commit] topic:#{@consumer.topic} group:#{@group} offset:#{@offset+1} partition:#{@partition}"
         @consumer.commit(@partition, @offset+1)
       end
     end
@@ -243,7 +243,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} partition:#{metadata.partition} #{@consumer.id}"
+        Sorceror.debug "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} partition:#{metadata.partition} #{@consumer.id}"
 
         Sorceror::MessageProcessor.process(Sorceror::Message::OperationBatch.new(payload: payload.value))
         metadata.ack
@@ -272,7 +272,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
+        Sorceror.debug "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
         Sorceror::MessageProcessor.process(Sorceror::Message::Event.new(payload: payload.value), @group_name)
         metadata.ack
@@ -301,7 +301,7 @@ class Sorceror::Backend::Poseidon
       end
 
       def process(payload, metadata)
-        Sorceror.info "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
+        Sorceror.debug "[kafka] [receive] topic:#{@consumer.topic} group:#{@group} offset:#{payload.offset} parition:#{metadata.partition} #{@consumer.id}"
 
         Sorceror::MessageProcessor.process(Sorceror::Message::Snapshot.new(payload: payload.value), @group_name)
         metadata.ack

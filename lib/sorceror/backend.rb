@@ -60,7 +60,13 @@ module Sorceror::Backend
         driver.publish(*args)
       end
       message = args[0]
-      Sorceror.info "[publish][kafka] #{message.topic}:#{message.partition_key}:#{message.key} #{message}"
+
+      log = "[publish] #{message.topic}:#{message.partition_key}:#{message.key} #{message}"
+      if message.is_a?(Sorceror::Message::OperationBatch)
+        Sorceror.info(log)
+      else
+        Sorceror.debug(log)
+      end
     end
 
     def start_subscriber(consumer)
