@@ -3,3 +3,5 @@ Gemfile.lock
 kafka*/
 log-cleaner.log
 coverage
+.ruby-version
+TODO.md
