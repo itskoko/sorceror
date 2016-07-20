@@ -8,6 +8,7 @@ class Sorceror::Middleware::DeadLetter
       yield
     rescue StandardError => e
       raise e unless Sorceror::Config.dead_letter
+      Sorceror::Config.error_notifier.call(e)
       dead_letter(message, e)
     end
   end

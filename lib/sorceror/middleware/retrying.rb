@@ -5,12 +5,11 @@ class Sorceror::Middleware::Retrying
     begin
       yield
     rescue StandardError => e
-      # TODO only notify the first time
-      Sorceror::Config.error_notifier.call(e)
       raise e unless Sorceror::Config.retry
       if retries < Sorceror::Config.max_retries
         retries += 1
         sleep 0.1 * 3**retries
+        Sorceror.info "[middleware] [retrying] [##{retries}] #{e.message}"
         retry
       else
         raise e
